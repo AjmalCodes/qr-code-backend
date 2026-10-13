@@ -1,0 +1,24 @@
+name: Deploy to Hostinger via SSH
+
+on:
+  push:
+    branches:
+      - main  # Agar aapka branch 'master' hai toh yahan 'master' likhein
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy via rsync
+        uses: easingthemes/ssh-deploy@v5.1.0
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
+          ARGS: "-rlgoDZz --delete"
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_USER: ${{ secrets.SSH_USERNAME }}
+          REMOTE_PORT: ${{ secrets.SSH_PORT }}
+          TARGET: "/home/u349290910/domains/moccasin-guanaco-991686.hostingersite.com/public_html"
+          EXCLUDE: "/.git/, /.github/, /node_modules/, /vendor/"
