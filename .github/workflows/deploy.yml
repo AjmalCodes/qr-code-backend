@@ -12,7 +12,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Sync Files via SFTP
+      - name: Deploy via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.5
         with:
           username: ${{ secrets.SSH_USERNAME }}
@@ -22,3 +22,4 @@ jobs:
           local_path: './*'
           remote_path: '/home/u349290910/domains/moccasin-guanaco-991686.hostingersite.com/public_html/'
           sftp_only: true
+          ssh_extra_args: "-o StrictHostKeyChecking=no"
