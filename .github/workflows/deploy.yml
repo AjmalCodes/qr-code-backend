@@ -22,3 +22,4 @@ jobs:
           local_path: './*'
           remote_path: '/home/u349290910/domains/moccasin-guanaco-991686.hostingersite.com/public_html/'
           sftp_only: true
+          
