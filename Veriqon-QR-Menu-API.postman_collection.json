@@ -1,0 +1,1233 @@
+{
+  "info": {
+    "name": "Veriqon QR Menu & Loyalty Platform API",
+    "description": "Complete API collection for the multi-tenant QR Menu & Loyalty backend: Super Admin, Restaurant Owner Dashboard, Public QR Menu & Ordering, Waiter Panel, and Customer Auth & Loyalty.\n\nHow to use:\n1. Set `base_url` (collection variable) to your app URL, e.g. http://localhost:8000.\n2. Run \"Super Admin Login\" (after seeding a super admin) or any login request — tokens and IDs are saved automatically into collection variables by each request's test script, so later requests in the same folder work without manual copy/paste.\n3. Folders are ordered to tell a working story: Super Admin creates a restaurant -> Owner sets up the menu/tables/staff/loyalty -> Public customer views menu & orders -> Waiter manages the order -> Customer signs up & claims a loyalty offer.\n\nNote: \"Waiter - Live Order Stream (SSE)\" is a long-lived Server-Sent-Events connection (polls every 2s, closes after ~55s). Postman will show it as a pending request rather than a normal JSON response; this is expected.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "b6f1a6b0-1b2b-4a4e-9c2a-veriqon-qr-menu"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
+    { "key": "super_admin_email", "value": "superadmin@gmail.com", "type": "string" },
+    { "key": "super_admin_password", "value": "12345678", "type": "string" },
+    { "key": "super_admin_token", "value": "", "type": "string" },
+    { "key": "owner_token", "value": "", "type": "string" },
+    { "key": "owner_email", "value": "", "type": "string" },
+    { "key": "owner_password", "value": "", "type": "string" },
+    { "key": "waiter_token", "value": "", "type": "string" },
+    { "key": "waiter_email", "value": "", "type": "string" },
+    { "key": "customer_token", "value": "", "type": "string" },
+    { "key": "customer_email", "value": "", "type": "string" },
+    { "key": "customer_password", "value": "Password123!", "type": "string" },
+    { "key": "customer_verification_token", "value": "", "type": "string" },
+    { "key": "customer_reset_token", "value": "", "type": "string" },
+    { "key": "restaurant_id", "value": "", "type": "string" },
+    { "key": "restaurant_slug", "value": "", "type": "string" },
+    { "key": "category_id", "value": "", "type": "string" },
+    { "key": "product_id", "value": "", "type": "string" },
+    { "key": "table_id", "value": "", "type": "string" },
+    { "key": "table_token", "value": "", "type": "string" },
+    { "key": "staff_id", "value": "", "type": "string" },
+    { "key": "loyalty_offer_id", "value": "", "type": "string" },
+    { "key": "order_number", "value": "", "type": "string" },
+    { "key": "order_id", "value": "", "type": "string" },
+    { "key": "redemption_code", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Generic Auth",
+      "item": [
+        {
+          "name": "Login (any role)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{super_admin_email}}\",\n  \"password\": \"{{super_admin_password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "login"]
+            },
+            "description": "Generic login used by the original /api/me and /api/logout endpoints. Works for any role (super_admin, restaurant, waiter, user) — returns a flat {message, user, token} shape (no success/data envelope)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.user && json.user.role === 'super_admin') {",
+                  "    pm.collectionVariables.set('super_admin_token', json.token);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "url": { "raw": "{{base_url}}/api/logout", "host": ["{{base_url}}"], "path": ["api", "logout"] }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "url": { "raw": "{{base_url}}/api/me", "host": ["{{base_url}}"], "path": ["api", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Super Admin",
+      "item": [
+        {
+          "name": "Super Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{super_admin_email}}\",\n  \"password\": \"{{super_admin_password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/login", "host": ["{{base_url}}"], "path": ["api", "login"] },
+            "description": "Seeded by database/seeders/SuperAdminSeeder.php (superadmin@gmail.com / 12345678)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('super_admin_token', pm.response.json().token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Restaurant (+ issues owner credentials)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pizza Palace\",\n  \"email\": \"owner@pizzapalace.test\",\n  \"phone\": \"+1-555-0100\",\n  \"address\": \"123 Main Street\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/restaurants", "host": ["{{base_url}}"], "path": ["api", "restaurants"] },
+            "description": "Creates the Restaurant record AND a Restaurant-owner user with a generated temporary password, then emails those credentials to the restaurant's email. name and email are required."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.collectionVariables.set('restaurant_id', data.id);",
+                  "  pm.collectionVariables.set('restaurant_slug', data.slug);",
+                  "  pm.collectionVariables.set('owner_email', 'owner@pizzapalace.test');",
+                  "  console.log('Check storage/logs/laravel.log (or your mail driver) for the generated owner password.');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Restaurants (search, filter, paginate)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{base_url}}/api/restaurants?search=&status=&per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "restaurants"],
+              "query": [
+                { "key": "search", "value": "", "description": "matches name, email, or slug" },
+                { "key": "status", "value": "", "description": "active | inactive" },
+                { "key": "per_page", "value": "15" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Restaurant",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{base_url}}/api/restaurants/{{restaurant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "restaurants", "{{restaurant_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Restaurant",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pizza Palace Downtown\",\n  \"phone\": \"+1-555-0199\",\n  \"address\": \"456 Market Street\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/restaurants/{{restaurant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "restaurants", "{{restaurant_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Toggle Restaurant Status (instant enable/disable)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{base_url}}/api/restaurants/{{restaurant_id}}/toggle-status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "restaurants", "{{restaurant_id}}", "toggle-status"]
+            },
+            "description": "Flips active<->inactive. A disabled restaurant's owner/staff logins and public menu/ordering are blocked on their very next request."
+          }
+        },
+        {
+          "name": "Delete Restaurant",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{base_url}}/api/restaurants/{{restaurant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "restaurants", "{{restaurant_id}}"]
+            },
+            "description": "Cascades: deletes the owner user account too, and (via DB foreign keys) categories, products, tables, orders, loyalty offers for this restaurant."
+          }
+        },
+        {
+          "name": "Platform Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "url": { "raw": "{{base_url}}/api/dashboard/stats", "host": ["{{base_url}}"], "path": ["api", "dashboard", "stats"] },
+            "description": "total_restaurants, active_restaurants, inactive_restaurants, total_orders, orders_today, pending_orders."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Owner Dashboard",
+      "item": [
+        {
+          "name": "Auth & Account",
+          "item": [
+            {
+              "name": "Owner Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{owner_email}}\",\n  \"password\": \"{{owner_password}}\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/login", "host": ["{{base_url}}"], "path": ["api", "owner", "login"] },
+                "description": "Use the email/temporary password from the \"Create Restaurant\" step (check your mail log) — set owner_password manually the first time, or change it via Change Password below and update the collection variable."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "  pm.collectionVariables.set('owner_token', pm.response.json().data.token);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Owner Logout",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/logout", "host": ["{{base_url}}"], "path": ["api", "owner", "logout"] }
+              }
+            },
+            {
+              "name": "Get Profile",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/profile", "host": ["{{base_url}}"], "path": ["api", "owner", "profile"] }
+              }
+            },
+            {
+              "name": "Update Profile",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Jordan Owner\",\n  \"phone\": \"+1-555-0101\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/profile", "host": ["{{base_url}}"], "path": ["api", "owner", "profile"] },
+                "description": "All fields are optional (sometimes): name, email, phone."
+              }
+            },
+            {
+              "name": "Change Password",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"current_password\": \"{{owner_password}}\",\n  \"password\": \"NewPassword123!\",\n  \"password_confirmation\": \"NewPassword123!\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/change-password", "host": ["{{base_url}}"], "path": ["api", "owner", "change-password"] }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "  pm.collectionVariables.set('owner_password', 'NewPassword123!');",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Restaurant Settings (text fields)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Pizza Palace\",\n  \"description\": \"Wood-fired pizza since 1995.\",\n  \"address\": \"123 Main Street\",\n  \"phone\": \"+1-555-0100\",\n  \"currency\": \"USD\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/restaurant-settings", "host": ["{{base_url}}"], "path": ["api", "owner", "restaurant-settings"] }
+              }
+            },
+            {
+              "name": "Update Restaurant Settings (upload logo)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "_method", "value": "PUT", "type": "text", "description": "Laravel method-spoofing: file uploads must be multipart, which HTML/Postman cannot send as PUT directly." },
+                    { "key": "logo", "type": "file", "src": [] }
+                  ]
+                },
+                "url": { "raw": "{{base_url}}/api/owner/restaurant-settings", "host": ["{{base_url}}"], "path": ["api", "owner", "restaurant-settings"] },
+                "description": "Sent as POST + _method=PUT because file uploads require multipart/form-data. Pick a logo file in the 'logo' field before sending."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Categories",
+          "item": [
+            {
+              "name": "List Categories",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/categories", "host": ["{{base_url}}"], "path": ["api", "owner", "categories"] }
+              }
+            },
+            {
+              "name": "Create Category",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Pizzas\",\n  \"description\": \"Wood-fired, 12-inch\",\n  \"sorting_order\": 1,\n  \"status\": \"active\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/categories", "host": ["{{base_url}}"], "path": ["api", "owner", "categories"] },
+                "description": "name is required. description, sorting_order, status (active|inactive, defaults to active) are optional."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "  pm.collectionVariables.set('category_id', pm.response.json().data.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Category",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/categories/{{category_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "categories", "{{category_id}}"] }
+              }
+            },
+            {
+              "name": "Update Category",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Pizzas & Flatbreads\",\n  \"sorting_order\": 2\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/categories/{{category_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "categories", "{{category_id}}"] }
+              }
+            },
+            {
+              "name": "Toggle Category Status",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/categories/{{category_id}}/toggle-status", "host": ["{{base_url}}"], "path": ["api", "owner", "categories", "{{category_id}}", "toggle-status"] }
+              }
+            },
+            {
+              "name": "Delete Category",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/categories/{{category_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "categories", "{{category_id}}"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Products",
+          "item": [
+            {
+              "name": "List Products (filter by category/status)",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": {
+                  "raw": "{{base_url}}/api/owner/products?category_id={{category_id}}&status=active",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "owner", "products"],
+                  "query": [
+                    { "key": "category_id", "value": "{{category_id}}" },
+                    { "key": "status", "value": "active", "description": "active | inactive | out_of_stock" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Product",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "category_id", "value": "{{category_id}}", "type": "text" },
+                    { "key": "name", "value": "Margherita Pizza", "type": "text" },
+                    { "key": "description", "value": "Tomato, mozzarella, basil", "type": "text" },
+                    { "key": "price", "value": "12.99", "type": "text" },
+                    { "key": "status", "value": "active", "type": "text" },
+                    { "key": "image", "type": "file", "src": [], "disabled": true, "description": "Optional. Enable and pick a file to upload a product image." }
+                  ]
+                },
+                "url": { "raw": "{{base_url}}/api/owner/products", "host": ["{{base_url}}"], "path": ["api", "owner", "products"] },
+                "description": "name and price are required. category_id, description, image, status (active|inactive|out_of_stock, defaults active) are optional. Sent as multipart since image upload is supported."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "  pm.collectionVariables.set('product_id', pm.response.json().data.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Product",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/products/{{product_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "products", "{{product_id}}"] }
+              }
+            },
+            {
+              "name": "Update Product (fields)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"price\": 13.99,\n  \"category_id\": {{category_id}}\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/products/{{product_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "products", "{{product_id}}"] }
+              }
+            },
+            {
+              "name": "Update Product (upload image)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "_method", "value": "PUT", "type": "text" },
+                    { "key": "image", "type": "file", "src": [] }
+                  ]
+                },
+                "url": { "raw": "{{base_url}}/api/owner/products/{{product_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "products", "{{product_id}}"] },
+                "description": "Sent as POST + _method=PUT for the same reason as the logo upload above."
+              }
+            },
+            {
+              "name": "Update Product Status (stock)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"out_of_stock\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/products/{{product_id}}/status", "host": ["{{base_url}}"], "path": ["api", "owner", "products", "{{product_id}}", "status"] },
+                "description": "status: active | inactive | out_of_stock. Reflected instantly on the public menu."
+              }
+            },
+            {
+              "name": "Delete Product",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/products/{{product_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "products", "{{product_id}}"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tables & QR",
+          "item": [
+            {
+              "name": "List Tables",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/tables", "host": ["{{base_url}}"], "path": ["api", "owner", "tables"] }
+              }
+            },
+            {
+              "name": "Create Table (generates QR payload)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Table 1\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/tables", "host": ["{{base_url}}"], "path": ["api", "owner", "tables"] },
+                "description": "Returns qr_token and a qr_target_url (e.g. {app_url}/r/{slug}?table={qr_token}) — feed that URL into any QR-image library to print it. label must be unique per restaurant."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "  const data = pm.response.json().data;",
+                      "  pm.collectionVariables.set('table_id', data.id);",
+                      "  pm.collectionVariables.set('table_token', data.qr_token);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Table",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/tables/{{table_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "tables", "{{table_id}}"] }
+              }
+            },
+            {
+              "name": "Update Table Label",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Patio 1\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/tables/{{table_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "tables", "{{table_id}}"] }
+              }
+            },
+            {
+              "name": "Regenerate Table QR Code",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/tables/{{table_id}}/regenerate-qr", "host": ["{{base_url}}"], "path": ["api", "owner", "tables", "{{table_id}}", "regenerate-qr"] },
+                "description": "Invalidates the old printed QR code (e.g. a lost/compromised table card) and issues a new token."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "  pm.collectionVariables.set('table_token', pm.response.json().data.qr_token);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Delete Table",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/tables/{{table_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "tables", "{{table_id}}"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff",
+          "item": [
+            {
+              "name": "List Staff",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/staff", "host": ["{{base_url}}"], "path": ["api", "owner", "staff"] }
+              }
+            },
+            {
+              "name": "Create Staff (Waiter) Account",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Wendy Waiter\",\n  \"email\": \"wendy@pizzapalace.test\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/staff", "host": ["{{base_url}}"], "path": ["api", "owner", "staff"] },
+                "description": "Generates a temporary password and emails it to the new staff member (check your mail log)."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "  const data = pm.response.json().data;",
+                      "  pm.collectionVariables.set('staff_id', data.id);",
+                      "  pm.collectionVariables.set('waiter_email', data.email);",
+                      "  console.log('Check storage/logs/laravel.log (or your mail driver) for the generated staff password.');",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Staff Member",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/staff/{{staff_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "staff", "{{staff_id}}"] }
+              }
+            },
+            {
+              "name": "Update Staff Member",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Wendy W.\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/staff/{{staff_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "staff", "{{staff_id}}"] }
+              }
+            },
+            {
+              "name": "Delete Staff Member",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/staff/{{staff_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "staff", "{{staff_id}}"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Loyalty Offers",
+          "item": [
+            {
+              "name": "List Loyalty Offers",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/loyalty-offers", "host": ["{{base_url}}"], "path": ["api", "owner", "loyalty-offers"] }
+              }
+            },
+            {
+              "name": "Create Loyalty Offer",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Buy 4 Pizzas Get 1 Free\",\n  \"description\": \"Applies to any pizza\",\n  \"product_id\": {{product_id}},\n  \"buy_quantity\": 4,\n  \"get_quantity\": 1\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/loyalty-offers", "host": ["{{base_url}}"], "path": ["api", "owner", "loyalty-offers"] },
+                "description": "title and buy_quantity are required. product_id is optional (omit/null to apply to any product) and, if given, must belong to this restaurant. get_quantity defaults to 1, is_active defaults to true."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "  pm.collectionVariables.set('loyalty_offer_id', pm.response.json().data.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Loyalty Offer",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/loyalty-offers/{{loyalty_offer_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "loyalty-offers", "{{loyalty_offer_id}}"] }
+              }
+            },
+            {
+              "name": "Update Loyalty Offer",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"buy_quantity\": 5\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/loyalty-offers/{{loyalty_offer_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "loyalty-offers", "{{loyalty_offer_id}}"] }
+              }
+            },
+            {
+              "name": "Toggle Loyalty Offer Active",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/loyalty-offers/{{loyalty_offer_id}}/toggle-active", "host": ["{{base_url}}"], "path": ["api", "owner", "loyalty-offers", "{{loyalty_offer_id}}", "toggle-active"] }
+              }
+            },
+            {
+              "name": "Delete Loyalty Offer",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/loyalty-offers/{{loyalty_offer_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "loyalty-offers", "{{loyalty_offer_id}}"] }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Public QR Menu & Ordering",
+      "item": [
+        {
+          "name": "Get Public Menu",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/public/r/{{restaurant_slug}}/menu", "host": ["{{base_url}}"], "path": ["api", "public", "r", "{{restaurant_slug}}", "menu"] },
+            "description": "No auth required. Returns only active categories with active (in-stock) products — out-of-stock/inactive items and a disabled restaurant both resolve to 404, never partially shown."
+          }
+        },
+        {
+          "name": "Place Order (scan table QR)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"table_token\": \"{{table_token}}\",\n  \"items\": [\n    {\n      \"product_id\": {{product_id}},\n      \"quantity\": 2,\n      \"special_instructions\": \"No onions please\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/public/r/{{restaurant_slug}}/orders", "host": ["{{base_url}}"], "path": ["api", "public", "r", "{{restaurant_slug}}", "orders"] },
+            "description": "No account required. table_token comes from the table's printed QR code. Instantly becomes visible on the Waiter Panel's order stream. If you're logged in as a customer (send the customer_token as a Bearer header), the order is linked to that account."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.collectionVariables.set('order_number', data.order_number);",
+                  "  pm.collectionVariables.set('order_id', data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Track Order Status (by order number)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/public/r/{{restaurant_slug}}/orders/{{order_number}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "public", "r", "{{restaurant_slug}}", "orders", "{{order_number}}", "status"]
+            },
+            "description": "Looked up by the unguessable order_number (not the database id) so a guest can poll status without an account."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Waiter Panel",
+      "item": [
+        {
+          "name": "Waiter Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{waiter_email}}\",\n  \"password\": \"password\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/waiter/login", "host": ["{{base_url}}"], "path": ["api", "waiter", "login"] },
+            "description": "Accepts either a waiter's credentials or the restaurant owner's (the owner can act as staff too). Use the temporary password emailed when the staff account was created."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('waiter_token', pm.response.json().data.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Waiter Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{waiter_token}}", "type": "string" }] },
+            "url": { "raw": "{{base_url}}/api/waiter/logout", "host": ["{{base_url}}"], "path": ["api", "waiter", "logout"] }
+          }
+        },
+        {
+          "name": "List Orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{waiter_token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{base_url}}/api/waiter/orders?status=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "waiter", "orders"],
+              "query": [{ "key": "status", "value": "", "description": "pending | preparing | served | completed" }]
+            },
+            "description": "Load this once for the initial screen, then subscribe to the live stream below for updates."
+          }
+        },
+        {
+          "name": "Live Order Stream (SSE)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "text/event-stream" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{waiter_token}}", "type": "string" }] },
+            "url": { "raw": "{{base_url}}/api/waiter/orders/stream", "host": ["{{base_url}}"], "path": ["api", "waiter", "orders", "stream"] },
+            "description": "Server-Sent Events: polls for new/updated orders every 2 seconds and streams them as `event: order` / `data: {...}`, closing after ~55s (a well-behaved SSE client reconnects automatically). Postman will show this request as pending/streaming rather than returning a normal JSON body — that is expected, not an error. Cancel the request manually when done testing."
+          }
+        },
+        {
+          "name": "Update Order Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{waiter_token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"preparing\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/waiter/orders/{{order_id}}/status", "host": ["{{base_url}}"], "path": ["api", "waiter", "orders", "{{order_id}}", "status"] },
+            "description": "Enforces the forward-only workflow: pending -> preparing -> served -> completed. Skipping a step (e.g. pending -> completed) is rejected with 422."
+          }
+        },
+        {
+          "name": "Verify Loyalty Redemption",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{waiter_token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{redemption_code}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/waiter/loyalty/verify-redemption", "host": ["{{base_url}}"], "path": ["api", "waiter", "loyalty", "verify-redemption"] },
+            "description": "Closes the loyalty verification loop: confirms the customer's one-time code shown on their screen, scoped to this restaurant and rejecting codes already verified/rejected."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Customer Auth & Loyalty",
+      "item": [
+        {
+          "name": "Sign Up",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Casey Customer\",\n  \"email\": \"{{customer_email}}\",\n  \"password\": \"{{customer_password}}\",\n  \"password_confirmation\": \"{{customer_password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/customer/auth/signup", "host": ["{{base_url}}"], "path": ["api", "customer", "auth", "signup"] },
+            "description": "Creates the account and emails a verification code. Set customer_email to a unique address before running (e.g. casey+1@example.com) — the account cannot log in until verified. Check your mail log for the code."
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{customer_verification_token}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/customer/auth/verify-email", "host": ["{{base_url}}"], "path": ["api", "customer", "auth", "verify-email"] },
+            "description": "Paste the code emailed after sign up into the customer_verification_token collection variable, or directly into this body."
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customer_email}}\",\n  \"password\": \"{{customer_password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/customer/auth/login", "host": ["{{base_url}}"], "path": ["api", "customer", "auth", "login"] },
+            "description": "Blocked with 403 until the account's email is verified."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('customer_token', pm.response.json().data.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customer_email}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/customer/auth/forgot-password", "host": ["{{base_url}}"], "path": ["api", "customer", "auth", "forgot-password"] },
+            "description": "Always returns success (win or lose) so this endpoint cannot be used to enumerate registered emails. Check your mail log for the reset code."
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customer_email}}\",\n  \"token\": \"{{customer_reset_token}}\",\n  \"password\": \"NewPassword123!\",\n  \"password_confirmation\": \"NewPassword123!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/customer/auth/reset-password", "host": ["{{base_url}}"], "path": ["api", "customer", "auth", "reset-password"] },
+            "description": "Paste the code emailed by Forgot Password into customer_reset_token first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('customer_password', 'NewPassword123!');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customer_token}}", "type": "string" }] },
+            "url": { "raw": "{{base_url}}/api/customer/auth/logout", "host": ["{{base_url}}"], "path": ["api", "customer", "auth", "logout"] }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customer_token}}", "type": "string" }] },
+            "url": { "raw": "{{base_url}}/api/customer/auth/profile", "host": ["{{base_url}}"], "path": ["api", "customer", "auth", "profile"] }
+          }
+        },
+        {
+          "name": "Active Offers for a Restaurant",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customer_token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{base_url}}/api/customer/loyalty/active-offers?restaurant_slug={{restaurant_slug}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "customer", "loyalty", "active-offers"],
+              "query": [{ "key": "restaurant_slug", "value": "{{restaurant_slug}}" }]
+            },
+            "description": "Shown directly in the QR menu. Requires a logged-in customer (but not necessarily verified) to view."
+          }
+        },
+        {
+          "name": "Claim Loyalty Offer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customer_token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loyalty_offer_id\": {{loyalty_offer_id}}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/customer/loyalty/claims", "host": ["{{base_url}}"], "path": ["api", "customer", "loyalty", "claims"] },
+            "description": "Requires a VERIFIED customer account (403 otherwise). Generates a one-time redemption_code — show it to staff, who confirm it via \"4. Waiter Panel > Verify Loyalty Redemption\"."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('redemption_code', pm.response.json().data.redemption_code);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
