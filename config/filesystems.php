@@ -41,7 +41,11 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim((string) env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Served through MediaController (routes/web.php) rather than the
+            // public/storage symlink: some hosts can't create/follow that
+            // symlink reliably (no SSH to re-run storage:link, symlinks
+            // disabled on the plan, etc.), so this works identically everywhere.
+            'url' => rtrim((string) env('APP_URL', 'http://localhost'), '/').'/media',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
