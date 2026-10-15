@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Models\Restaurant;
+use App\Models\Subscription;
 use App\Models\User;
 
 test('super admin can view platform dashboard stats', function () {
@@ -23,6 +24,10 @@ test('super admin can view platform dashboard stats', function () {
                 'total_orders',
                 'orders_today',
                 'pending_orders',
+                'active_subscriptions',
+                'recent_restaurants' => [
+                    '*' => ['id', 'name', 'slug', 'status', 'created_at'],
+                ],
             ],
         ])
         ->assertJson([
@@ -32,6 +37,35 @@ test('super admin can view platform dashboard stats', function () {
                 'inactive_restaurants' => 1,
             ],
         ]);
+});
+
+test('dashboard stats count only active subscriptions', function () {
+    $admin = User::factory()->create(['role' => UserRole::SuperAdmin->value]);
+    $token = $admin->createToken('token')->plainTextToken;
+
+    Subscription::factory()->create(['status' => 'active']);
+    Subscription::factory()->create(['status' => 'active']);
+    Subscription::factory()->cancelled()->create();
+    Subscription::factory()->expired()->create();
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->getJson('/api/dashboard/stats');
+
+    $response->assertStatus(200)->assertJson(['data' => ['active_subscriptions' => 2]]);
+});
+
+test('dashboard stats list the most recently created restaurants', function () {
+    $admin = User::factory()->create(['role' => UserRole::SuperAdmin->value]);
+    $token = $admin->createToken('token')->plainTextToken;
+
+    Restaurant::factory()->create(['name' => 'Older Place', 'created_at' => now()->subDays(2)]);
+    $newest = Restaurant::factory()->create(['name' => 'Newest Place', 'created_at' => now()]);
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->getJson('/api/dashboard/stats');
+
+    $response->assertStatus(200);
+    expect($response->json('data.recent_restaurants.0.name'))->toBe($newest->name);
 });
 
 test('non super admin cannot view dashboard stats', function () {

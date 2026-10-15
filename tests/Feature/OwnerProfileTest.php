@@ -2,6 +2,8 @@
 
 use App\Enums\UserRole;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 test('owner can view their profile with restaurant details', function () {
     ['token' => $token, 'user' => $user, 'restaurant' => $restaurant] = createOwnerWithRestaurant();
@@ -45,6 +47,33 @@ test('owner can update their profile', function () {
         'name' => 'Updated Owner Name',
         'phone' => '555-0100',
     ]);
+});
+
+test('owner can upload a profile photo', function () {
+    Storage::fake('public');
+    ['token' => $token] = createOwnerWithRestaurant();
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->post('/api/owner/profile', [
+            '_method' => 'PUT',
+            'avatar' => UploadedFile::fake()->image('avatar.jpg'),
+        ]);
+
+    $response->assertStatus(200);
+    expect($response->json('data.avatar_url'))->not->toBeNull();
+});
+
+test('owner profile photo upload rejects a non-image file', function () {
+    Storage::fake('public');
+    ['token' => $token] = createOwnerWithRestaurant();
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->post('/api/owner/profile', [
+            '_method' => 'PUT',
+            'avatar' => UploadedFile::fake()->create('document.pdf', 100),
+        ]);
+
+    $response->assertStatus(422)->assertJsonValidationErrors(['avatar']);
 });
 
 test('owner profile update rejects a duplicate email', function () {

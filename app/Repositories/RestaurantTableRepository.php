@@ -27,6 +27,11 @@ class RestaurantTableRepository
         return RestaurantTable::where('restaurant_id', $restaurantId)->orderBy('label')->get();
     }
 
+    public function countForRestaurant(int $restaurantId): int
+    {
+        return RestaurantTable::where('restaurant_id', $restaurantId)->count();
+    }
+
     public function update(RestaurantTable $table, array $data): bool
     {
         return $table->update($data);

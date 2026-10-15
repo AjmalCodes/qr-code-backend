@@ -26,4 +26,9 @@ class RestaurantTable extends Model
     {
         return $this->hasMany(Order::class);
     }
+
+    public function scans(): HasMany
+    {
+        return $this->hasMany(QrScan::class);
+    }
 }

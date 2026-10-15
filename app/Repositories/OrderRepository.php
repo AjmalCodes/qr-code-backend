@@ -3,10 +3,57 @@
 namespace App\Repositories;
 
 use App\Models\Order;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as BaseCollection;
 
 class OrderRepository
 {
+    // Typed against CarbonInterface (not the concrete Illuminate\Support\Carbon
+    // class) because this app's AppServiceProvider calls Date::use(CarbonImmutable::class),
+    // so now()/today() return CarbonImmutable — a sibling, not a subclass, of Carbon.
+    public function countForRestaurant(int $restaurantId, ?CarbonInterface $from = null, ?CarbonInterface $to = null): int
+    {
+        return Order::where('restaurant_id', $restaurantId)
+            ->when($from, fn ($query) => $query->where('created_at', '>=', $from))
+            ->when($to, fn ($query) => $query->where('created_at', '<=', $to))
+            ->count();
+    }
+
+    public function countForRestaurantByStatus(int $restaurantId, string $status, ?CarbonInterface $from = null, ?CarbonInterface $to = null): int
+    {
+        return Order::where('restaurant_id', $restaurantId)
+            ->where('status', $status)
+            ->when($from, fn ($query) => $query->where('created_at', '>=', $from))
+            ->when($to, fn ($query) => $query->where('created_at', '<=', $to))
+            ->count();
+    }
+
+    public function sumRevenueForRestaurant(int $restaurantId, ?CarbonInterface $from = null, ?CarbonInterface $to = null): float
+    {
+        return (float) Order::where('restaurant_id', $restaurantId)
+            ->when($from, fn ($query) => $query->where('created_at', '>=', $from))
+            ->when($to, fn ($query) => $query->where('created_at', '<=', $to))
+            ->sum('total_amount');
+    }
+
+    /**
+     * Order counts grouped by table, to pair against QR scan counts per
+     * table (scan-to-order conversion).
+     *
+     * @return BaseCollection<int, object{restaurant_table_id: int, orders: int}>
+     */
+    public function countsByTableForRestaurant(int $restaurantId, ?CarbonInterface $from = null, ?CarbonInterface $to = null): BaseCollection
+    {
+        return Order::query()
+            ->selectRaw('restaurant_table_id, count(*) as orders')
+            ->where('restaurant_id', $restaurantId)
+            ->when($from, fn ($query) => $query->where('created_at', '>=', $from))
+            ->when($to, fn ($query) => $query->where('created_at', '<=', $to))
+            ->groupBy('restaurant_table_id')
+            ->get();
+    }
+
     public function create(array $data): Order
     {
         return Order::create($data);
@@ -37,13 +84,15 @@ class OrderRepository
     }
 
     /**
-     * @param  array{status?: string}  $filters
+     * @param  array{status?: string, from?: CarbonInterface, to?: CarbonInterface}  $filters
      */
     public function getAllForRestaurant(int $restaurantId, array $filters = []): Collection
     {
-        return Order::with(['items', 'table'])
+        return Order::with(['items', 'table', 'customer'])
             ->where('restaurant_id', $restaurantId)
             ->when(isset($filters['status']), fn ($query) => $query->where('status', $filters['status']))
+            ->when(isset($filters['from']), fn ($query) => $query->where('created_at', '>=', $filters['from']))
+            ->when(isset($filters['to']), fn ($query) => $query->where('created_at', '<=', $filters['to']))
             ->latest()
             ->get();
     }

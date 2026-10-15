@@ -4,11 +4,13 @@ namespace App\Models;
 
 use App\Concerns\HasTeams;
 use App\Enums\UserRole;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -19,7 +21,7 @@ class User extends Authenticatable implements PasskeyUser
     use HasApiTokens, HasFactory, HasTeams, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     protected $fillable = [
-        'name', 'email', 'phone', 'password', 'role', 'restaurant_id',
+        'name', 'email', 'phone', 'avatar', 'password', 'role', 'restaurant_id',
     ];
 
     protected function casts(): array
@@ -70,5 +72,10 @@ class User extends Authenticatable implements PasskeyUser
     public function tenantRestaurant(): ?Restaurant
     {
         return $this->isWaiter() ? $this->staffRestaurant : $this->restaurant;
+    }
+
+    protected function avatarUrl(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->avatar ? Storage::disk('public')->url($this->avatar) : null);
     }
 }

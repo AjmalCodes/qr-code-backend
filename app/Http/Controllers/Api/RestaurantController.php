@@ -146,6 +146,7 @@ class RestaurantController extends Controller
      * Instantly enable or disable a restaurant - Super admin only.
      * Every tenant-scoped request (owner login, staff login, public menu)
      * re-checks this status, so access is blocked on the very next request.
+     * Returns the full restaurant plus its owner's user profile.
      */
     public function toggleStatus(Restaurant $restaurant): JsonResponse
     {
@@ -155,7 +156,26 @@ class RestaurantController extends Controller
             'message' => 'Restaurant status updated successfully',
             'data' => [
                 'id' => $restaurant->id,
+                'name' => $restaurant->name,
+                'slug' => $restaurant->slug,
+                'email' => $restaurant->email,
+                'phone' => $restaurant->phone,
+                'address' => $restaurant->address,
+                'description' => $restaurant->description,
+                'currency' => $restaurant->currency,
+                'logo_url' => $restaurant->logo_url,
                 'status' => $restaurant->status->value,
+                'user_id' => $restaurant->user_id,
+                'created_at' => $restaurant->created_at,
+                'updated_at' => $restaurant->updated_at,
+                'user' => $restaurant->user ? [
+                    'id' => $restaurant->user->id,
+                    'name' => $restaurant->user->name,
+                    'email' => $restaurant->user->email,
+                    'phone' => $restaurant->user->phone,
+                    'role' => $restaurant->user->role->value,
+                    'created_at' => $restaurant->user->created_at,
+                ] : null,
             ],
         ]);
     }

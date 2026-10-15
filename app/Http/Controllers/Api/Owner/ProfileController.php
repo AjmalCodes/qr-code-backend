@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Owner\ChangePasswordRequest;
 use App\Http\Requests\Owner\UpdateProfileRequest;
 use App\Http\Resources\Owner\OwnerProfileResource;
-use App\Services\Owner\ProfileService;
+use App\Services\ProfileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -28,11 +28,16 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update the owner's own account details (name, email, phone, etc).
+     * Update the owner's own account details (name, email, phone, avatar).
+     * Send as multipart/form-data (with `_method=PUT`) to upload a photo.
      */
     public function update(UpdateProfileRequest $request): JsonResponse
     {
-        $user = $this->profileService->updateProfile($request->user(), $request->validated());
+        $user = $this->profileService->updateProfile(
+            $request->user(),
+            $request->safe()->except('avatar'),
+            $request->file('avatar'),
+        );
 
         return $this->success(new OwnerProfileResource($user->load('restaurant')), 'Profile updated successfully');
     }

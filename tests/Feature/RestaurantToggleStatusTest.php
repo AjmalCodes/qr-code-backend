@@ -19,6 +19,40 @@ test('super admin can disable a restaurant', function () {
     $this->assertDatabaseHas('restaurants', ['id' => $restaurant->id, 'status' => 'inactive']);
 });
 
+test('toggle status returns the full restaurant and owner user profile', function () {
+    $admin = User::factory()->create(['role' => UserRole::SuperAdmin->value]);
+    $token = $admin->createToken('token')->plainTextToken;
+
+    ['restaurant' => $restaurant, 'user' => $owner] = createOwnerWithRestaurant();
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->patchJson("/api/restaurants/{$restaurant->id}/toggle-status");
+
+    $response->assertStatus(200)
+        ->assertJsonStructure([
+            'message',
+            'data' => [
+                'id', 'name', 'slug', 'email', 'phone', 'address', 'description',
+                'currency', 'logo_url', 'status', 'user_id', 'created_at', 'updated_at',
+                'user' => ['id', 'name', 'email', 'phone', 'role', 'created_at'],
+            ],
+        ])
+        ->assertJson([
+            'data' => [
+                'id' => $restaurant->id,
+                'name' => $restaurant->name,
+                'slug' => $restaurant->slug,
+                'status' => 'inactive',
+                'user' => [
+                    'id' => $owner->id,
+                    'name' => $owner->name,
+                    'email' => $owner->email,
+                    'role' => 'restaurant',
+                ],
+            ],
+        ]);
+});
+
 test('super admin can re-enable a disabled restaurant', function () {
     $admin = User::factory()->create(['role' => UserRole::SuperAdmin->value]);
     $token = $admin->createToken('token')->plainTextToken;

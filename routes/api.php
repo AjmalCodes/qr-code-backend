@@ -1,20 +1,28 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Api\AdminDashboardController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Customer\AuthController as CustomerAuthController;
 use App\Http\Controllers\Api\Customer\LoyaltyController as CustomerLoyaltyController;
 use App\Http\Controllers\Api\Owner\AuthController as OwnerAuthController;
 use App\Http\Controllers\Api\Owner\CategoryController;
+use App\Http\Controllers\Api\Owner\CustomerController as OwnerCustomerController;
+use App\Http\Controllers\Api\Owner\DashboardController as OwnerDashboardController;
 use App\Http\Controllers\Api\Owner\LoyaltyOfferController;
+use App\Http\Controllers\Api\Owner\OrderController as OwnerOrderController;
 use App\Http\Controllers\Api\Owner\ProductController;
 use App\Http\Controllers\Api\Owner\ProfileController;
+use App\Http\Controllers\Api\Owner\QrAnalyticsController;
+use App\Http\Controllers\Api\Owner\ReportController as OwnerReportController;
 use App\Http\Controllers\Api\Owner\RestaurantSettingsController;
 use App\Http\Controllers\Api\Owner\StaffController;
+use App\Http\Controllers\Api\Owner\SubscriptionController as OwnerSubscriptionController;
 use App\Http\Controllers\Api\Owner\TableController;
 use App\Http\Controllers\Api\Public\MenuController as PublicMenuController;
 use App\Http\Controllers\Api\Public\OrderController as PublicOrderController;
 use App\Http\Controllers\Api\RestaurantController;
+use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\Waiter\AuthController as WaiterAuthController;
 use App\Http\Controllers\Api\Waiter\LoyaltyController as WaiterLoyaltyController;
 use App\Http\Controllers\Api\Waiter\OrderController as WaiterOrderController;
@@ -36,9 +44,19 @@ Route::get('/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth:sanctum', EnsureSuperAdmin::class])->group(function () {
+    // Account settings
+    Route::get('/admin/profile', [AdminProfileController::class, 'show']);
+    Route::put('/admin/profile', [AdminProfileController::class, 'update']);
+    Route::put('/admin/change-password', [AdminProfileController::class, 'changePassword']);
+
     Route::apiResource('restaurants', RestaurantController::class);
     Route::patch('/restaurants/{restaurant}/toggle-status', [RestaurantController::class, 'toggleStatus']);
     Route::get('/dashboard/stats', [AdminDashboardController::class, 'stats']);
+
+    // Subscriptions: pass ?status=active to list exactly the restaurants
+    // currently on an active plan.
+    Route::apiResource('subscriptions', SubscriptionController::class);
+    Route::patch('/subscriptions/{subscription}/cancel', [SubscriptionController::class, 'cancel']);
 });
 
 /*
@@ -57,6 +75,19 @@ Route::prefix('owner')->group(function () {
         Route::put('/profile', [ProfileController::class, 'update']);
         Route::put('/change-password', [ProfileController::class, 'changePassword']);
         Route::put('/restaurant-settings', [RestaurantSettingsController::class, 'update']);
+        Route::get('/subscription', [OwnerSubscriptionController::class, 'show']);
+
+        // Dashboard, analytics, and reports
+        Route::get('/dashboard/stats', [OwnerDashboardController::class, 'stats']);
+        Route::get('/analytics/qr', [QrAnalyticsController::class, 'index']);
+        Route::get('/reports', [OwnerReportController::class, 'index']);
+
+        // Orders (read access — status changes happen on the Waiter Panel)
+        Route::get('/orders', [OwnerOrderController::class, 'index']);
+        Route::get('/orders/{id}', [OwnerOrderController::class, 'show']);
+
+        // Customers who have ordered from this restaurant
+        Route::get('/customers', [OwnerCustomerController::class, 'index']);
 
         // Category management
         Route::get('/categories', [CategoryController::class, 'index']);

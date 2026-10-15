@@ -28,6 +28,7 @@
     { "key": "table_token", "value": "", "type": "string" },
     { "key": "staff_id", "value": "", "type": "string" },
     { "key": "loyalty_offer_id", "value": "", "type": "string" },
+    { "key": "subscription_id", "value": "", "type": "string" },
     { "key": "order_number", "value": "", "type": "string" },
     { "key": "order_id", "value": "", "type": "string" },
     { "key": "redemption_code", "value": "", "type": "string" }
@@ -120,6 +121,81 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "  pm.collectionVariables.set('super_admin_token', pm.response.json().token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "url": { "raw": "{{base_url}}/api/admin/profile", "host": ["{{base_url}}"], "path": ["api", "admin", "profile"] }
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ada Admin\",\n  \"phone\": \"+1-555-0123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/admin/profile", "host": ["{{base_url}}"], "path": ["api", "admin", "profile"] },
+            "description": "All fields optional (sometimes): name, email, phone."
+          }
+        },
+        {
+          "name": "Update My Profile (upload photo)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "_method", "value": "PUT", "type": "text", "description": "Laravel method-spoofing: file uploads must be multipart, which HTML/Postman cannot send as PUT directly." },
+                { "key": "avatar", "type": "file", "src": [] },
+                { "key": "name", "value": "", "type": "text", "disabled": true, "description": "Optional: update other fields in the same request." }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/admin/profile", "host": ["{{base_url}}"], "path": ["api", "admin", "profile"] },
+            "description": "Sent as POST + _method=PUT because file uploads require multipart/form-data. Pick an image in the 'avatar' field before sending. Replacing a photo deletes the old file; response includes avatar_url."
+          }
+        },
+        {
+          "name": "Change My Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"{{super_admin_password}}\",\n  \"password\": \"NewAdminPassword123!\",\n  \"password_confirmation\": \"NewAdminPassword123!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/admin/change-password", "host": ["{{base_url}}"], "path": ["api", "admin", "change-password"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('super_admin_password', 'NewAdminPassword123!');",
                   "}"
                 ]
               }
@@ -224,8 +300,22 @@
               "host": ["{{base_url}}"],
               "path": ["api", "restaurants", "{{restaurant_id}}", "toggle-status"]
             },
-            "description": "Flips active<->inactive. A disabled restaurant's owner/staff logins and public menu/ordering are blocked on their very next request."
-          }
+            "description": "Flips active<->inactive. A disabled restaurant's owner/staff logins and public menu/ordering are blocked on their very next request. Response data includes the full restaurant (name, slug, email, phone, address, description, currency, logo_url, status, timestamps) plus the nested owner `user` object (id, name, email, phone, role, created_at)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const user = pm.response.json().data.user;",
+                  "  if (user) { pm.collectionVariables.set('owner_email', user.email); }",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Delete Restaurant",
@@ -248,7 +338,104 @@
             "header": [{ "key": "Accept", "value": "application/json" }],
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
             "url": { "raw": "{{base_url}}/api/dashboard/stats", "host": ["{{base_url}}"], "path": ["api", "dashboard", "stats"] },
-            "description": "total_restaurants, active_restaurants, inactive_restaurants, total_orders, orders_today, pending_orders."
+            "description": "total_restaurants, active_restaurants, inactive_restaurants, total_orders, orders_today, pending_orders, active_subscriptions, recent_restaurants (last 5, newest first)."
+          }
+        },
+        {
+          "name": "List Subscriptions (all / active only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{base_url}}/api/subscriptions?status=active&search=&per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "subscriptions"],
+              "query": [
+                { "key": "status", "value": "active", "description": "trial | active | expired | cancelled. Remove this param to see every subscription." },
+                { "key": "search", "value": "", "description": "matches plan_name or the restaurant's name/slug" },
+                { "key": "per_page", "value": "15" }
+              ]
+            },
+            "description": "Pass ?status=active (as set here) to see exactly the restaurants currently on an active plan. Remove the status filter to list all subscription history."
+          }
+        },
+        {
+          "name": "Create Subscription (assign plan to restaurant)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"restaurant_id\": {{restaurant_id}},\n  \"plan_name\": \"Pro\",\n  \"amount\": 29.99,\n  \"ends_at\": \"{{$isoTimestamp}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/subscriptions", "host": ["{{base_url}}"], "path": ["api", "subscriptions"] },
+            "description": "restaurant_id, plan_name, and amount are required. starts_at defaults to now, status defaults to active, ends_at is optional (nullable = ongoing)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('subscription_id', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Subscription",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "url": { "raw": "{{base_url}}/api/subscriptions/{{subscription_id}}", "host": ["{{base_url}}"], "path": ["api", "subscriptions", "{{subscription_id}}"] }
+          }
+        },
+        {
+          "name": "Update Subscription",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_name\": \"Enterprise\",\n  \"amount\": 99.99\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/subscriptions/{{subscription_id}}", "host": ["{{base_url}}"], "path": ["api", "subscriptions", "{{subscription_id}}"] },
+            "description": "All fields optional (sometimes): plan_name, amount, status, starts_at, ends_at."
+          }
+        },
+        {
+          "name": "Cancel Subscription",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "url": { "raw": "{{base_url}}/api/subscriptions/{{subscription_id}}/cancel", "host": ["{{base_url}}"], "path": ["api", "subscriptions", "{{subscription_id}}", "cancel"] },
+            "description": "Sets status to cancelled and stamps cancelled_at — keeps the record for billing history. Prefer this over Delete for the normal business action."
+          }
+        },
+        {
+          "name": "Delete Subscription",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "url": { "raw": "{{base_url}}/api/subscriptions/{{subscription_id}}", "host": ["{{base_url}}"], "path": ["api", "subscriptions", "{{subscription_id}}"] },
+            "description": "Permanently removes the record — for correcting a mistake, not for normal cancellation (use Cancel Subscription for that)."
           }
         }
       ]
@@ -387,6 +574,133 @@
                 },
                 "url": { "raw": "{{base_url}}/api/owner/restaurant-settings", "host": ["{{base_url}}"], "path": ["api", "owner", "restaurant-settings"] },
                 "description": "Sent as POST + _method=PUT because file uploads require multipart/form-data. Pick a logo file in the 'logo' field before sending."
+              }
+            },
+            {
+              "name": "Get My Subscription",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/subscription", "host": ["{{base_url}}"], "path": ["api", "owner", "subscription"] },
+                "description": "Read-only: the restaurant's current (most recent) subscription. Response includes remaining_days (null if ongoing, 0 once lapsed). 404 if the Super Admin has not created one yet."
+              }
+            },
+            {
+              "name": "Update My Profile (upload photo)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "_method", "value": "PUT", "type": "text", "description": "Laravel method-spoofing: file uploads must be multipart, which HTML/Postman cannot send as PUT directly." },
+                    { "key": "avatar", "type": "file", "src": [] },
+                    { "key": "name", "value": "", "type": "text", "disabled": true, "description": "Optional: update other fields in the same request." }
+                  ]
+                },
+                "url": { "raw": "{{base_url}}/api/owner/profile", "host": ["{{base_url}}"], "path": ["api", "owner", "profile"] },
+                "description": "Sent as POST + _method=PUT because file uploads require multipart/form-data. Pick an image in the 'avatar' field before sending. Replacing a photo deletes the old file; response includes avatar_url."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dashboard, Analytics & Reports",
+          "item": [
+            {
+              "name": "Dashboard Stats",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/dashboard/stats", "host": ["{{base_url}}"], "path": ["api", "owner", "dashboard", "stats"] },
+                "description": "All-time + today snapshot: orders (total/today/pending/preparing/completed), revenue (total/today), menu size (categories/products/active/out_of_stock), table count, total QR scans, and the current subscription (with remaining_days)."
+              }
+            },
+            {
+              "name": "QR Scan Analytics",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": {
+                  "raw": "{{base_url}}/api/owner/analytics/qr?from=&to=",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "owner", "analytics", "qr"],
+                  "query": [
+                    { "key": "from", "value": "", "description": "Y-m-d, optional" },
+                    { "key": "to", "value": "", "description": "Y-m-d, optional" }
+                  ]
+                },
+                "description": "Per-table scan count, order count, and conversion rate (orders/scans), plus restaurant-wide totals. A \"scan\" is recorded every time the public menu is loaded with that table's ?table= token — see \"3. Public QR Menu & Ordering\" > Get Public Menu."
+              }
+            },
+            {
+              "name": "Reports (date-ranged dashboard)",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": {
+                  "raw": "{{base_url}}/api/owner/reports?from=&to=",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "owner", "reports"],
+                  "query": [
+                    { "key": "from", "value": "", "description": "Y-m-d, optional" },
+                    { "key": "to", "value": "", "description": "Y-m-d, optional" }
+                  ]
+                },
+                "description": "The exact same data source and shape as Dashboard Stats, scoped to a date range. Omit from/to for an all-time report identical to the dashboard."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Orders",
+          "item": [
+            {
+              "name": "List Orders",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": {
+                  "raw": "{{base_url}}/api/owner/orders?status=&from=&to=",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "owner", "orders"],
+                  "query": [
+                    { "key": "status", "value": "", "description": "pending | preparing | served | completed" },
+                    { "key": "from", "value": "", "description": "Y-m-d, optional" },
+                    { "key": "to", "value": "", "description": "Y-m-d, optional" }
+                  ]
+                },
+                "description": "Read access to every order for this restaurant. Status changes happen on the Waiter Panel, not here."
+              }
+            },
+            {
+              "name": "Get Order",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "orders", "{{order_id}}"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customers",
+          "item": [
+            {
+              "name": "List Customers",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
+                "url": { "raw": "{{base_url}}/api/owner/customers", "host": ["{{base_url}}"], "path": ["api", "owner", "customers"] },
+                "description": "Registered customers who have ordered from this restaurant, with their order count, total spend, and last order date for this restaurant specifically. Guest orders (no account) are not included."
               }
             }
           ]
@@ -893,8 +1207,13 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/public/r/{{restaurant_slug}}/menu", "host": ["{{base_url}}"], "path": ["api", "public", "r", "{{restaurant_slug}}", "menu"] },
-            "description": "No auth required. Returns only active categories with active (in-stock) products — out-of-stock/inactive items and a disabled restaurant both resolve to 404, never partially shown."
+            "url": {
+              "raw": "{{base_url}}/api/public/r/{{restaurant_slug}}/menu?table={{table_token}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "public", "r", "{{restaurant_slug}}", "menu"],
+              "query": [{ "key": "table", "value": "{{table_token}}", "description": "The qr_token from the table's printed QR code. Passing a valid one records a scan for Owner > QR Scan Analytics. Omit it to view the menu without logging a scan." }]
+            },
+            "description": "No auth required. Returns only active categories with active (in-stock) products — out-of-stock/inactive items and a disabled restaurant both resolve to 404, never partially shown. Pass ?table={qr_token} to record a QR scan."
           }
         },
         {

@@ -20,6 +20,7 @@ class OwnerProfileResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'phone' => $this->phone,
+            'avatar_url' => $this->avatar_url,
             'role' => $this->role->value,
             'restaurant' => $this->whenLoaded('restaurant', fn () => new RestaurantResource($this->restaurant)),
             'created_at' => $this->created_at,

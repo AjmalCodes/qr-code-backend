@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
 
 class Restaurant extends Model
@@ -70,6 +71,25 @@ class Restaurant extends Model
     public function loyaltyOffers(): HasMany
     {
         return $this->hasMany(LoyaltyOffer::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function qrScans(): HasMany
+    {
+        return $this->hasMany(QrScan::class);
+    }
+
+    /**
+     * The most recently created subscription, regardless of its status —
+     * used to show "what plan is this restaurant on" even if it expired.
+     */
+    public function latestSubscription(): HasOne
+    {
+        return $this->hasOne(Subscription::class)->latestOfMany();
     }
 
     public function isActive(): bool

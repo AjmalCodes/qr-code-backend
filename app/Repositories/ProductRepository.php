@@ -34,6 +34,16 @@ class ProductRepository
             ->get();
     }
 
+    public function countForRestaurant(int $restaurantId): int
+    {
+        return Product::where('restaurant_id', $restaurantId)->count();
+    }
+
+    public function countForRestaurantByStatus(int $restaurantId, string $status): int
+    {
+        return Product::where('restaurant_id', $restaurantId)->where('status', $status)->count();
+    }
+
     public function update(Product $product, array $data): bool
     {
         return $product->update($data);

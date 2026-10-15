@@ -29,6 +29,11 @@ class CategoryRepository
             ->get();
     }
 
+    public function countForRestaurant(int $restaurantId): int
+    {
+        return Category::where('restaurant_id', $restaurantId)->count();
+    }
+
     public function update(Category $category, array $data): bool
     {
         return $category->update($data);

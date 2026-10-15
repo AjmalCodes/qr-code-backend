@@ -8,6 +8,14 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class RestaurantRepository
 {
+    /**
+     * The most recently created restaurants, for the Super Admin dashboard.
+     */
+    public function recent(int $limit = 5): Collection
+    {
+        return Restaurant::latest()->limit($limit)->get();
+    }
+
     public function create(array $data): Restaurant
     {
         return Restaurant::create($data);

@@ -86,7 +86,7 @@ class RestaurantService
 
         $this->restaurantRepository->update($restaurant, ['status' => $newStatus->value]);
 
-        return $restaurant->fresh();
+        return $restaurant->fresh('user');
     }
 
     public function getRestaurantById(int $id): ?Restaurant
