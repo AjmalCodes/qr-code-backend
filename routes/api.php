@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\Owner\TableController;
 use App\Http\Controllers\Api\Public\MenuController as PublicMenuController;
 use App\Http\Controllers\Api\Public\OrderController as PublicOrderController;
 use App\Http\Controllers\Api\RestaurantController;
+use App\Http\Controllers\Api\RestaurantUserController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\Waiter\AuthController as WaiterAuthController;
 use App\Http\Controllers\Api\Waiter\LoyaltyController as WaiterLoyaltyController;
@@ -52,6 +53,7 @@ Route::middleware(['auth:sanctum', EnsureSuperAdmin::class])->group(function () 
 
     Route::apiResource('restaurants', RestaurantController::class);
     Route::patch('/restaurants/{restaurant}/toggle-status', [RestaurantController::class, 'toggleStatus']);
+    Route::get('/restaurant-users', [RestaurantUserController::class, 'index']);
     Route::get('/dashboard/stats', [AdminDashboardController::class, 'stats']);
 
     // Subscriptions: pass ?status=active to list exactly the restaurants

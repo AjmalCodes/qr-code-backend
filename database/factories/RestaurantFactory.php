@@ -21,14 +21,14 @@ class RestaurantFactory extends Factory
      */
     public function definition(): array
     {
-        $user = User::factory()->create([
-            'role' => UserRole::Restaurant->value,
-        ]);
-
         $name = $this->faker->unique()->company();
 
         return [
-            'user_id' => $user->id,
+            // A *lazy* factory, not ->create(): when the caller overrides
+            // user_id (e.g. Restaurant::factory()->create(['user_id' => $owner->id])),
+            // Laravel skips this definition entirely instead of still creating
+            // a throwaway orphan User as a side effect.
+            'user_id' => User::factory()->state(['role' => UserRole::Restaurant->value]),
             'name' => $name,
             'slug' => Str::slug($name).'-'.$this->faker->unique()->numberBetween(1000, 999999),
             'email' => $this->faker->unique()->companyEmail(),

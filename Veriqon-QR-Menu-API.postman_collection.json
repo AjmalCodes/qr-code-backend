@@ -318,6 +318,24 @@
           ]
         },
         {
+          "name": "List Restaurant Owners (deduped by user)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{base_url}}/api/restaurant-users?search=&per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "restaurant-users"],
+              "query": [
+                { "key": "search", "value": "", "description": "matches the owner's name/email, or any of their restaurants' name/slug/email" },
+                { "key": "per_page", "value": "15" }
+              ]
+            },
+            "description": "One row per restaurant-owner account — if an owner is ever linked to multiple restaurants (the DB allows it, though today's \"Create Restaurant\" flow always makes a fresh owner per restaurant), they appear exactly once here, with every restaurant they own nested under `restaurants` (an array), never repeated as separate rows per restaurant."
+          }
+        },
+        {
           "name": "Delete Restaurant",
           "request": {
             "method": "DELETE",

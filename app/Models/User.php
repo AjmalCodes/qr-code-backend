@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -35,11 +36,22 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
-     * The restaurant this user owns (when role is Restaurant).
+     * The restaurant this user owns (when role is Restaurant). Today's
+     * creation flow always gives an owner exactly one, but restaurants.user_id
+     * has no unique constraint — use restaurants() instead when a user could
+     * plausibly own more than one, so none are silently dropped.
      */
     public function restaurant(): HasOne
     {
         return $this->hasOne(Restaurant::class);
+    }
+
+    /**
+     * Every restaurant this user owns, for the rare/future case of more than one.
+     */
+    public function restaurants(): HasMany
+    {
+        return $this->hasMany(Restaurant::class);
     }
 
     /**
