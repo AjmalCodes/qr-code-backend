@@ -66,6 +66,34 @@ class SubscriptionService
     }
 
     /**
+     * Active-subscription counts for each of the last 12 months, oldest
+     * first, ending with the current month. A subscription counts toward a
+     * month if its active date range overlapped that month at all — based
+     * on its own dates, so this is a true historical trend, not just a
+     * snapshot of what's active today re-labeled onto each month.
+     *
+     * @return array<int, array{year: int, month: int, label: string, count: int}>
+     */
+    public function getMonthlyActiveCounts(): array
+    {
+        $months = [];
+
+        for ($i = 11; $i >= 0; $i--) {
+            $monthStart = now()->subMonths($i)->startOfMonth();
+            $monthEnd = now()->subMonths($i)->endOfMonth();
+
+            $months[] = [
+                'year' => $monthStart->year,
+                'month' => $monthStart->month,
+                'label' => $monthStart->format('M Y'),
+                'count' => $this->subscriptionRepository->countActiveDuring($monthStart, $monthEnd),
+            ];
+        }
+
+        return $months;
+    }
+
+    /**
      * Flips every active subscription whose ends_at has passed to expired.
      * Run daily by the scheduler (see app/Console/Commands/ExpireSubscriptions.php).
      *

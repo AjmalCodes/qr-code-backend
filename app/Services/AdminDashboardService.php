@@ -30,6 +30,7 @@ class AdminDashboardService
             'orders_today' => Order::whereDate('created_at', today())->count(),
             'pending_orders' => Order::where('status', OrderStatus::Pending->value)->count(),
             'active_subscriptions' => $this->subscriptionService->countActive(),
+            'monthly_active_subscriptions' => $this->subscriptionService->getMonthlyActiveCounts(),
             'recent_restaurants' => $this->restaurantRepository->recent(5)->map(fn (Restaurant $r) => [
                 'id' => $r->id,
                 'name' => $r->name,

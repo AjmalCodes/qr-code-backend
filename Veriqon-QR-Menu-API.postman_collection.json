@@ -338,7 +338,7 @@
             "header": [{ "key": "Accept", "value": "application/json" }],
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
             "url": { "raw": "{{base_url}}/api/dashboard/stats", "host": ["{{base_url}}"], "path": ["api", "dashboard", "stats"] },
-            "description": "total_restaurants, active_restaurants, inactive_restaurants, total_orders, orders_today, pending_orders, active_subscriptions, recent_restaurants (last 5, newest first)."
+            "description": "total_restaurants, active_restaurants, inactive_restaurants, total_orders, orders_today, pending_orders, active_subscriptions (right now), recent_restaurants (last 5, newest first), and monthly_active_subscriptions — an array of exactly 12 entries (oldest first, last entry is the current month), each {year, month, label (e.g. \"Jan 2026\"), count}. A subscription counts toward a month if its active date range overlapped that month at all, based on its own starts_at/ends_at/cancelled_at — so this is a true historical trend (e.g. a subscription cancelled last month still counts for the months before it was cancelled), not just today's snapshot repeated 12 times."
           }
         },
         {

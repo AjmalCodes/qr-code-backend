@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Enums\SubscriptionStatus;
 use App\Models\Subscription;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -54,6 +55,20 @@ class SubscriptionRepository
     public function countByStatus(string $status): int
     {
         return Subscription::where('status', $status)->count();
+    }
+
+    /**
+     * How many subscriptions were active at any point during this date
+     * range — based on each subscription's own start/end/cancellation
+     * dates, not its current status, so a historical month still correctly
+     * counts a subscription that has since expired or been cancelled.
+     */
+    public function countActiveDuring(CarbonInterface $periodStart, CarbonInterface $periodEnd): int
+    {
+        return Subscription::where('starts_at', '<=', $periodEnd)
+            ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>=', $periodStart))
+            ->where(fn ($query) => $query->whereNull('cancelled_at')->orWhere('cancelled_at', '>=', $periodStart))
+            ->count();
     }
 
     /**
