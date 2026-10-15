@@ -28,6 +28,17 @@ class CustomerRepository
             ->get();
     }
 
+    /**
+     * How many distinct registered customers have placed at least one order
+     * with this restaurant — guest orders (no customer_id) don't count.
+     */
+    public function countForRestaurant(int $restaurantId): int
+    {
+        return Customer::query()
+            ->whereHas('orders', fn ($query) => $query->where('restaurant_id', $restaurantId))
+            ->count();
+    }
+
     public function findByEmail(string $email): ?Customer
     {
         return Customer::where('email', $email)->first();

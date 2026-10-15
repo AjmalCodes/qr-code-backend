@@ -110,6 +110,18 @@ class OrderRepository
     }
 
     /**
+     * Most recently placed orders, for the dashboard's "recent orders" widget.
+     */
+    public function getRecentForRestaurant(int $restaurantId, int $limit = 5): Collection
+    {
+        return Order::with(['items', 'table', 'customer'])
+            ->where('restaurant_id', $restaurantId)
+            ->latest()
+            ->take($limit)
+            ->get();
+    }
+
+    /**
      * Orders created or updated after the given moment, for polling-based
      * live sync on the Waiter Panel.
      */

@@ -634,7 +634,7 @@
                 "header": [{ "key": "Accept", "value": "application/json" }],
                 "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
                 "url": { "raw": "{{base_url}}/api/owner/dashboard/stats", "host": ["{{base_url}}"], "path": ["api", "owner", "dashboard", "stats"] },
-                "description": "All-time + today snapshot: orders (total/today/pending/preparing/completed), revenue (total/today), menu size (categories/products/active/out_of_stock), table count, total QR scans, and the current subscription (with remaining_days)."
+                "description": "All-time + today snapshot: orders (total/today/pending/preparing/completed), revenue (total/today), menu size (categories/products/active/out_of_stock), table count, the current subscription (with remaining_days), qr_scans (total plus by_table — an array of {table_id, label, scans, orders, conversion_rate}, one entry per table, e.g. Table 1: 12 scans, Table 2: 8 scans), total_customers (distinct registered customers who have ordered here), monthly_stats (always the last 12 months, oldest first, each {year, month, label, orders, revenue} — a fixed trailing window independent of any ?from/?to filter), and recent_orders (the latest 5 orders, newest first)."
               }
             },
             {

@@ -16,8 +16,9 @@ class DashboardController extends Controller
     public function __construct(private DashboardService $dashboardService) {}
 
     /**
-     * All-time + today snapshot for the dashboard landing screen: orders,
-     * revenue, menu size, tables, total QR scans, and current subscription.
+     * All-time + today snapshot for the dashboard landing screen: order/
+     * revenue/menu/table cards, QR scans (total and per-table), total
+     * customers, current subscription, a 12-month graph, and recent orders.
      */
     public function stats(Request $request): JsonResponse
     {

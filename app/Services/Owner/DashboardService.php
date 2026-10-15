@@ -4,15 +4,16 @@ namespace App\Services\Owner;
 
 use App\Enums\OrderStatus;
 use App\Enums\ProductStatus;
+use App\Http\Resources\OrderResource;
 use App\Http\Resources\SubscriptionResource;
 use App\Models\Restaurant;
 use App\Repositories\CategoryRepository;
 use App\Repositories\OrderRepository;
 use App\Repositories\ProductRepository;
-use App\Repositories\QrScanRepository;
 use App\Repositories\RestaurantTableRepository;
 use App\Services\SubscriptionService;
 use Carbon\CarbonInterface;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class DashboardService
 {
@@ -21,7 +22,8 @@ class DashboardService
         private CategoryRepository $categoryRepository,
         private ProductRepository $productRepository,
         private RestaurantTableRepository $tableRepository,
-        private QrScanRepository $qrScanRepository,
+        private QrAnalyticsService $qrAnalyticsService,
+        private CustomerService $customerService,
         private SubscriptionService $subscriptionService,
     ) {}
 
@@ -59,8 +61,59 @@ class DashboardService
                 'out_of_stock_products' => $this->productRepository->countForRestaurantByStatus($restaurantId, ProductStatus::OutOfStock->value),
             ],
             'tables' => $this->tableRepository->countForRestaurant($restaurantId),
-            'qr_scans_total' => $this->qrScanRepository->countForRestaurant($restaurantId, $from, $to),
+            'qr_scans' => $this->qrScansCard($restaurantId, $from, $to),
+            'total_customers' => $this->customerService->countForRestaurant($restaurantId),
             'subscription' => $subscription ? new SubscriptionResource($subscription) : null,
+            'monthly_stats' => $this->monthlyStats($restaurantId),
+            'recent_orders' => $this->recentOrders($restaurantId),
         ];
+    }
+
+    /**
+     * Total scans plus a per-table breakdown — "table 1: 10 scans, table 2:
+     * 8 scans" — for the dashboard's QR scan card.
+     *
+     * @return array<string, mixed>
+     */
+    private function qrScansCard(int $restaurantId, ?CarbonInterface $from, ?CarbonInterface $to): array
+    {
+        $analytics = $this->qrAnalyticsService->getAnalytics($restaurantId, $from, $to);
+
+        return [
+            'total' => $analytics['total_scans'],
+            'by_table' => $analytics['tables'],
+        ];
+    }
+
+    /**
+     * Last 12 months of order counts and revenue for this restaurant, for
+     * the dashboard's month-wise graph — always a fixed trailing window,
+     * independent of any $from/$to filter applied to the other figures.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function monthlyStats(int $restaurantId): array
+    {
+        $months = [];
+
+        for ($i = 11; $i >= 0; $i--) {
+            $monthStart = now()->subMonths($i)->startOfMonth();
+            $monthEnd = now()->subMonths($i)->endOfMonth();
+
+            $months[] = [
+                'year' => $monthStart->year,
+                'month' => $monthStart->month,
+                'label' => $monthStart->format('M Y'),
+                'orders' => $this->orderRepository->countForRestaurant($restaurantId, $monthStart, $monthEnd),
+                'revenue' => $this->orderRepository->sumRevenueForRestaurant($restaurantId, $monthStart, $monthEnd),
+            ];
+        }
+
+        return $months;
+    }
+
+    private function recentOrders(int $restaurantId): AnonymousResourceCollection
+    {
+        return OrderResource::collection($this->orderRepository->getRecentForRestaurant($restaurantId, 5));
     }
 }

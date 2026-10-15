@@ -12,7 +12,7 @@ test('owner report without a date range matches the dashboard shape', function (
     $response->assertStatus(200)
         ->assertJsonStructure([
             'data' => [
-                'period', 'orders', 'revenue', 'menu', 'tables', 'qr_scans_total', 'subscription',
+                'period', 'orders', 'revenue', 'menu', 'tables', 'qr_scans', 'total_customers', 'subscription', 'monthly_stats', 'recent_orders',
             ],
         ])
         ->assertJson(['data' => ['orders' => ['total' => 1], 'revenue' => ['total' => 25.0]]]);

@@ -13,4 +13,9 @@ class CustomerService
     {
         return $this->customerRepository->getForRestaurant($restaurantId);
     }
+
+    public function countForRestaurant(int $restaurantId): int
+    {
+        return $this->customerRepository->countForRestaurant($restaurantId);
+    }
 }
