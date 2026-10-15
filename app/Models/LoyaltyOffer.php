@@ -44,4 +44,9 @@ class LoyaltyOffer extends Model
     {
         return $this->hasMany(LoyaltyClaim::class);
     }
+
+    public function progress(): HasMany
+    {
+        return $this->hasMany(LoyaltyProgress::class);
+    }
 }

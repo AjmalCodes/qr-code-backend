@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Api\Customer;
 use App\Http\Controllers\Api\Concerns\ApiResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Customer\ClaimOfferRequest;
-use App\Http\Resources\LoyaltyOfferResource;
 use App\Models\Customer;
 use App\Models\LoyaltyOffer;
 use App\Repositories\LoyaltyOfferRepository;
+use App\Repositories\LoyaltyProgressRepository;
 use App\Services\LoyaltyService;
 use App\Services\RestaurantService;
 use Illuminate\Http\JsonResponse;
@@ -22,12 +22,15 @@ class LoyaltyController extends Controller
     public function __construct(
         private RestaurantService $restaurantService,
         private LoyaltyOfferRepository $loyaltyOfferRepository,
+        private LoyaltyProgressRepository $loyaltyProgressRepository,
         private LoyaltyService $loyaltyService,
     ) {}
 
     /**
-     * Active loyalty offers for a restaurant, shown directly in the QR menu.
-     * Identify the restaurant with ?restaurant_slug=.
+     * Active loyalty offers for a restaurant, shown directly in the QR menu,
+     * each with the authenticated customer's own progress ("2/4 coffees")
+     * and whether it's ready to redeem right now. Identify the restaurant
+     * with ?restaurant_slug=.
      */
     public function activeOffers(Request $request): JsonResponse
     {
@@ -43,7 +46,24 @@ class LoyaltyController extends Controller
 
         $offers = $this->loyaltyOfferRepository->getActiveForRestaurant($restaurant->id);
 
-        return $this->success(LoyaltyOfferResource::collection($offers));
+        /** @var Customer $customer */
+        $customer = $request->user('customer');
+        $progressByOffer = $this->loyaltyProgressRepository->getForCustomer($customer->id);
+
+        return $this->success($offers->map(function (LoyaltyOffer $offer) use ($progressByOffer) {
+            $progress = min($progressByOffer->get($offer->id)?->progress_count ?? 0, $offer->buy_quantity);
+
+            return [
+                'id' => $offer->id,
+                'title' => $offer->title,
+                'description' => $offer->description,
+                'product_id' => $offer->product_id,
+                'buy_quantity' => $offer->buy_quantity,
+                'get_quantity' => $offer->get_quantity,
+                'progress' => $progress,
+                'is_redeemable' => $progress >= $offer->buy_quantity,
+            ];
+        }));
     }
 
     /**
@@ -68,6 +88,7 @@ class LoyaltyController extends Controller
             'redemption_code' => $claim->redemption_code,
             'status' => $claim->status->value,
             'offer_title' => $offer->title,
+            'get_quantity' => $offer->get_quantity,
         ], 'Offer claimed. Show this code to staff to redeem it.', 201);
     }
 }

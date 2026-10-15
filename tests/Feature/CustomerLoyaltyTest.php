@@ -2,6 +2,7 @@
 
 use App\Models\Customer;
 use App\Models\LoyaltyOffer;
+use App\Models\LoyaltyProgress;
 
 test('active offers are listed for a restaurant by slug', function () {
     ['restaurant' => $restaurant] = createOwnerWithRestaurant();
@@ -19,7 +20,105 @@ test('active offers are listed for a restaurant by slug', function () {
         ->assertJsonMissing(['title' => 'Inactive Offer']);
 });
 
-test('a verified customer can claim an active offer', function () {
+test('active offers show the customers own progress and redeemability', function () {
+    ['restaurant' => $restaurant] = createOwnerWithRestaurant();
+    $offer = LoyaltyOffer::factory()->create(['restaurant_id' => $restaurant->id, 'is_active' => true, 'buy_quantity' => 4]);
+
+    ['token' => $token, 'customer' => $customer] = createVerifiedCustomer();
+    LoyaltyProgress::factory()->create(['customer_id' => $customer->id, 'loyalty_offer_id' => $offer->id, 'progress_count' => 2]);
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->getJson("/api/customer/loyalty/active-offers?restaurant_slug={$restaurant->slug}");
+
+    $response->assertStatus(200)
+        ->assertJson(['data' => [['progress' => 2, 'buy_quantity' => 4, 'is_redeemable' => false]]]);
+});
+
+test('active offers mark an offer redeemable once progress meets buy_quantity', function () {
+    ['restaurant' => $restaurant] = createOwnerWithRestaurant();
+    $offer = LoyaltyOffer::factory()->create(['restaurant_id' => $restaurant->id, 'is_active' => true, 'buy_quantity' => 4]);
+
+    ['token' => $token, 'customer' => $customer] = createVerifiedCustomer();
+    LoyaltyProgress::factory()->create(['customer_id' => $customer->id, 'loyalty_offer_id' => $offer->id, 'progress_count' => 4]);
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->getJson("/api/customer/loyalty/active-offers?restaurant_slug={$restaurant->slug}");
+
+    $response->assertStatus(200)
+        ->assertJson(['data' => [['progress' => 4, 'is_redeemable' => true]]]);
+});
+
+test('a customer with enough progress can claim the offer', function () {
+    ['restaurant' => $restaurant] = createOwnerWithRestaurant();
+    $offer = LoyaltyOffer::factory()->create(['restaurant_id' => $restaurant->id, 'is_active' => true, 'buy_quantity' => 4]);
+
+    ['token' => $token, 'customer' => $customer] = createVerifiedCustomer();
+    LoyaltyProgress::factory()->create(['customer_id' => $customer->id, 'loyalty_offer_id' => $offer->id, 'progress_count' => 4]);
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->postJson('/api/customer/loyalty/claims', ['loyalty_offer_id' => $offer->id]);
+
+    $response->assertStatus(201)
+        ->assertJsonStructure(['data' => ['id', 'redemption_code', 'status', 'offer_title', 'get_quantity']]);
+
+    $this->assertDatabaseHas('loyalty_claims', [
+        'loyalty_offer_id' => $offer->id,
+        'customer_id' => $customer->id,
+        'status' => 'pending',
+    ]);
+});
+
+test('claiming resets progress so the customer must buy again for the next reward', function () {
+    ['restaurant' => $restaurant] = createOwnerWithRestaurant();
+    $offer = LoyaltyOffer::factory()->create(['restaurant_id' => $restaurant->id, 'is_active' => true, 'buy_quantity' => 4]);
+
+    ['token' => $token, 'customer' => $customer] = createVerifiedCustomer();
+    LoyaltyProgress::factory()->create(['customer_id' => $customer->id, 'loyalty_offer_id' => $offer->id, 'progress_count' => 4]);
+
+    $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->postJson('/api/customer/loyalty/claims', ['loyalty_offer_id' => $offer->id])
+        ->assertStatus(201);
+
+    $this->assertDatabaseHas('loyalty_progress', [
+        'customer_id' => $customer->id,
+        'loyalty_offer_id' => $offer->id,
+        'progress_count' => 0,
+    ]);
+});
+
+test('claiming with surplus progress carries the remainder forward', function () {
+    ['restaurant' => $restaurant] = createOwnerWithRestaurant();
+    $offer = LoyaltyOffer::factory()->create(['restaurant_id' => $restaurant->id, 'is_active' => true, 'buy_quantity' => 4]);
+
+    ['token' => $token, 'customer' => $customer] = createVerifiedCustomer();
+    LoyaltyProgress::factory()->create(['customer_id' => $customer->id, 'loyalty_offer_id' => $offer->id, 'progress_count' => 6]);
+
+    $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->postJson('/api/customer/loyalty/claims', ['loyalty_offer_id' => $offer->id])
+        ->assertStatus(201);
+
+    $this->assertDatabaseHas('loyalty_progress', [
+        'customer_id' => $customer->id,
+        'loyalty_offer_id' => $offer->id,
+        'progress_count' => 2,
+    ]);
+});
+
+test('a customer without enough progress cannot claim the offer', function () {
+    ['restaurant' => $restaurant] = createOwnerWithRestaurant();
+    $offer = LoyaltyOffer::factory()->create(['restaurant_id' => $restaurant->id, 'is_active' => true, 'buy_quantity' => 4]);
+
+    ['token' => $token, 'customer' => $customer] = createVerifiedCustomer();
+    LoyaltyProgress::factory()->create(['customer_id' => $customer->id, 'loyalty_offer_id' => $offer->id, 'progress_count' => 2]);
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->postJson('/api/customer/loyalty/claims', ['loyalty_offer_id' => $offer->id]);
+
+    $response->assertStatus(422)->assertJsonValidationErrors(['offer']);
+    $this->assertDatabaseMissing('loyalty_claims', ['loyalty_offer_id' => $offer->id, 'customer_id' => $customer->id]);
+});
+
+test('a customer with no purchase history at all cannot claim the offer', function () {
     ['restaurant' => $restaurant] = createOwnerWithRestaurant();
     $offer = LoyaltyOffer::factory()->create(['restaurant_id' => $restaurant->id, 'is_active' => true]);
 
@@ -28,14 +127,8 @@ test('a verified customer can claim an active offer', function () {
     $response = $this->withHeaders(['Authorization' => "Bearer $token"])
         ->postJson('/api/customer/loyalty/claims', ['loyalty_offer_id' => $offer->id]);
 
-    $response->assertStatus(201)
-        ->assertJsonStructure(['data' => ['id', 'redemption_code', 'status', 'offer_title']]);
-
-    $this->assertDatabaseHas('loyalty_claims', [
-        'loyalty_offer_id' => $offer->id,
-        'customer_id' => $customer->id,
-        'status' => 'pending',
-    ]);
+    $response->assertStatus(422);
+    $this->assertDatabaseMissing('loyalty_claims', ['loyalty_offer_id' => $offer->id, 'customer_id' => $customer->id]);
 });
 
 test('an unverified customer cannot claim an offer', function () {

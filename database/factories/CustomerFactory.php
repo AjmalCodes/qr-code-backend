@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\Customer;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 /**
  * @extends Factory<Customer>
@@ -32,8 +31,8 @@ class CustomerFactory extends Factory
     {
         return $this->state(fn () => [
             'email_verified_at' => null,
-            'email_verification_token' => Str::random(40),
-            'email_verification_expires_at' => now()->addHours(24),
+            'email_verification_token' => (string) $this->faker->unique()->numberBetween(100000, 999999),
+            'email_verification_expires_at' => now()->addMinutes(15),
         ]);
     }
 }

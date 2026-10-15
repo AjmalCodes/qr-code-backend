@@ -66,7 +66,19 @@ class OrderRepository
 
     public function findByIdForCustomer(int $id, int $customerId): ?Order
     {
-        return Order::with('items')->where('customer_id', $customerId)->find($id);
+        return Order::with(['items', 'table', 'restaurant'])->where('customer_id', $customerId)->find($id);
+    }
+
+    /**
+     * Every order this customer has placed, across all restaurants — their
+     * full order history for "my orders".
+     */
+    public function getAllForCustomer(int $customerId): Collection
+    {
+        return Order::with(['items', 'table', 'restaurant'])
+            ->where('customer_id', $customerId)
+            ->latest()
+            ->get();
     }
 
     /**

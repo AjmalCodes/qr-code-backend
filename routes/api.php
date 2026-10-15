@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AdminDashboardController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Customer\AuthController as CustomerAuthController;
 use App\Http\Controllers\Api\Customer\LoyaltyController as CustomerLoyaltyController;
+use App\Http\Controllers\Api\Customer\OrderController as CustomerOrderController;
 use App\Http\Controllers\Api\Owner\AuthController as OwnerAuthController;
 use App\Http\Controllers\Api\Owner\CategoryController;
 use App\Http\Controllers\Api\Owner\CustomerController as OwnerCustomerController;
@@ -173,6 +174,10 @@ Route::prefix('customer')->group(function () {
     Route::middleware(['auth:sanctum', EnsureCustomer::class])->group(function () {
         Route::post('/auth/logout', [CustomerAuthController::class, 'logout']);
         Route::get('/auth/profile', [CustomerAuthController::class, 'profile']);
+
+        // Order history
+        Route::get('/orders', [CustomerOrderController::class, 'index']);
+        Route::get('/orders/{id}', [CustomerOrderController::class, 'show']);
 
         Route::get('/loyalty/active-offers', [CustomerLoyaltyController::class, 'activeOffers']);
 

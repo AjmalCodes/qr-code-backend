@@ -8,7 +8,6 @@ use App\Repositories\CustomerRepository;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Str;
 
 class CustomerAuthService
 {
@@ -20,8 +19,8 @@ class CustomerAuthService
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
-            'email_verification_token' => Str::random(40),
-            'email_verification_expires_at' => now()->addHours(24),
+            'email_verification_token' => $this->generateOtp(),
+            'email_verification_expires_at' => now()->addMinutes(15),
         ]);
 
         Mail::to($customer->email)->send(new CustomerEmailVerification($customer));
@@ -56,8 +55,8 @@ class CustomerAuthService
     public function resendVerification(Customer $customer): void
     {
         $this->customerRepository->update($customer, [
-            'email_verification_token' => Str::random(40),
-            'email_verification_expires_at' => now()->addHours(24),
+            'email_verification_token' => $this->generateOtp(),
+            'email_verification_expires_at' => now()->addMinutes(15),
         ]);
 
         Mail::to($customer->email)->send(new CustomerEmailVerification($customer->fresh()));
@@ -90,5 +89,20 @@ class CustomerAuthService
                 $this->customerRepository->update($customer, ['password' => Hash::make($password)]);
             },
         );
+    }
+
+    /**
+     * A 6-digit numeric OTP — short enough to read aloud or type from an
+     * email, unlike a long opaque token. Checked for uniqueness against
+     * other currently-pending verifications (collisions are already rare
+     * at 6 digits, but a used/expired OTP is cleared to null on verify).
+     */
+    private function generateOtp(): string
+    {
+        do {
+            $otp = (string) random_int(100000, 999999);
+        } while ($this->customerRepository->findByVerificationToken($otp));
+
+        return $otp;
     }
 }

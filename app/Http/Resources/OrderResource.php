@@ -17,6 +17,11 @@ class OrderResource extends JsonResource
         return [
             'id' => $this->id,
             'order_number' => $this->order_number,
+            'restaurant' => $this->whenLoaded('restaurant', fn () => [
+                'id' => $this->restaurant->id,
+                'name' => $this->restaurant->name,
+                'slug' => $this->restaurant->slug,
+            ]),
             'table' => $this->whenLoaded('table', fn () => [
                 'id' => $this->table->id,
                 'label' => $this->table->label,

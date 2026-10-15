@@ -49,6 +49,11 @@ class Customer extends Authenticatable implements CanResetPasswordContract
         return $this->hasMany(LoyaltyClaim::class);
     }
 
+    public function loyaltyProgress(): HasMany
+    {
+        return $this->hasMany(LoyaltyProgress::class);
+    }
+
     public function hasVerifiedEmail(): bool
     {
         return $this->email_verified_at !== null;

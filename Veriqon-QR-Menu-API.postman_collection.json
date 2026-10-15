@@ -1230,7 +1230,7 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": { "raw": "{{base_url}}/api/public/r/{{restaurant_slug}}/orders", "host": ["{{base_url}}"], "path": ["api", "public", "r", "{{restaurant_slug}}", "orders"] },
-            "description": "No account required. table_token comes from the table's printed QR code. Instantly becomes visible on the Waiter Panel's order stream. If you're logged in as a customer (send the customer_token as a Bearer header), the order is linked to that account."
+            "description": "No account required. table_token comes from the table's printed QR code. Instantly becomes visible on the Waiter Panel's order stream. If you're logged in as a customer (send the customer_token as a Bearer header), the order is linked to that account AND advances their loyalty progress for any active offer matching an ordered product (or a restaurant-wide offer) — see '5. Customer Auth & Loyalty' > Active Offers for a Restaurant."
           },
           "event": [
             {
@@ -1385,7 +1385,7 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": { "raw": "{{base_url}}/api/customer/auth/signup", "host": ["{{base_url}}"], "path": ["api", "customer", "auth", "signup"] },
-            "description": "Creates the account and emails a verification code. Set customer_email to a unique address before running (e.g. casey+1@example.com) — the account cannot log in until verified. Check your mail log for the code."
+            "description": "Creates the account and emails a 6-digit OTP (valid 15 minutes). Set customer_email to a unique address before running (e.g. casey+1@example.com) — the account cannot log in until verified. Check your mail log for the code."
           }
         },
         {
@@ -1402,7 +1402,7 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": { "raw": "{{base_url}}/api/customer/auth/verify-email", "host": ["{{base_url}}"], "path": ["api", "customer", "auth", "verify-email"] },
-            "description": "Paste the code emailed after sign up into the customer_verification_token collection variable, or directly into this body."
+            "description": "token must be exactly 6 digits. Paste the OTP emailed after sign up into the customer_verification_token collection variable, or directly into this body. On success the OTP is deleted from the database (it cannot be reused)."
           }
         },
         {
@@ -1501,6 +1501,26 @@
           }
         },
         {
+          "name": "List My Orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customer_token}}", "type": "string" }] },
+            "url": { "raw": "{{base_url}}/api/customer/orders", "host": ["{{base_url}}"], "path": ["api", "customer", "orders"] },
+            "description": "Full order history for this customer, across every restaurant they've ordered from (not scoped to one tenant)."
+          }
+        },
+        {
+          "name": "Get My Order",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customer_token}}", "type": "string" }] },
+            "url": { "raw": "{{base_url}}/api/customer/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["api", "customer", "orders", "{{order_id}}"] },
+            "description": "404 if this order does not belong to the authenticated customer."
+          }
+        },
+        {
           "name": "Active Offers for a Restaurant",
           "request": {
             "method": "GET",
@@ -1512,7 +1532,7 @@
               "path": ["api", "customer", "loyalty", "active-offers"],
               "query": [{ "key": "restaurant_slug", "value": "{{restaurant_slug}}" }]
             },
-            "description": "Shown directly in the QR menu. Requires a logged-in customer (but not necessarily verified) to view."
+            "description": "Shown directly in the QR menu. Requires a logged-in customer (but not necessarily verified) to view. Each offer includes this customer's own progress (e.g. 2 of 4 coffees bought) and is_redeemable (true once progress reaches buy_quantity) — progress builds automatically from Place Order, not from any separate action."
           }
         },
         {
@@ -1530,7 +1550,7 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": { "raw": "{{base_url}}/api/customer/loyalty/claims", "host": ["{{base_url}}"], "path": ["api", "customer", "loyalty", "claims"] },
-            "description": "Requires a VERIFIED customer account (403 otherwise). Generates a one-time redemption_code — show it to staff, who confirm it via \"4. Waiter Panel > Verify Loyalty Redemption\"."
+            "description": "Requires a VERIFIED customer account (403 otherwise) AND enough purchase progress on this offer (422 with a \"buy N more\" message otherwise — see Active Offers for current progress). On success, progress is reduced by buy_quantity (any surplus carries forward) and a one-time redemption_code is generated — show it to staff, who confirm it via \"4. Waiter Panel > Verify Loyalty Redemption\"."
           },
           "event": [
             {

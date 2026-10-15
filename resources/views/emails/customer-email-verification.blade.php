@@ -21,13 +21,13 @@
 
                             <p style="color:#374151; font-size:15px; line-height:1.6;">
                                 Hi {{ $customer->name }}, please confirm your email address to activate loyalty
-                                offers on your account. Enter this verification code in the app, or use the link below:
+                                offers on your account. Enter this one-time code in the app:
                             </p>
 
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb; border-radius:6px; margin:24px 0;">
                                 <tr>
                                     <td style="padding:20px; text-align:center;">
-                                        <p style="margin:0; color:#111827; font-size:20px; letter-spacing:2px; font-family: monospace;">
+                                        <p style="margin:0; color:#111827; font-size:28px; letter-spacing:6px; font-family: monospace;">
                                             {{ $token }}
                                         </p>
                                     </td>
@@ -35,7 +35,7 @@
                             </table>
 
                             <p style="color:#9ca3af; font-size:13px; line-height:1.6;">
-                                This code expires in 24 hours. If you did not create an account, you can ignore this email.
+                                This code expires in 15 minutes. If you did not create an account, you can ignore this email.
                             </p>
                         </td>
                     </tr>

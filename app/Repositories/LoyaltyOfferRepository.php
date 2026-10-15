@@ -27,6 +27,19 @@ class LoyaltyOfferRepository
         return LoyaltyOffer::where('restaurant_id', $restaurantId)->where('is_active', true)->latest()->get();
     }
 
+    /**
+     * Active offers that a purchase of this product counts toward — either
+     * tied to this exact product, or a restaurant-wide offer (product_id
+     * is null, meaning "any product").
+     */
+    public function getActiveForRestaurantAndProduct(int $restaurantId, int $productId): Collection
+    {
+        return LoyaltyOffer::where('restaurant_id', $restaurantId)
+            ->where('is_active', true)
+            ->where(fn ($query) => $query->where('product_id', $productId)->orWhereNull('product_id'))
+            ->get();
+    }
+
     public function update(LoyaltyOffer $offer, array $data): bool
     {
         return $offer->update($data);

@@ -9,6 +9,8 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Restaurant;
 use App\Models\RestaurantTable;
+use App\Repositories\LoyaltyOfferRepository;
+use App\Repositories\LoyaltyProgressRepository;
 use App\Repositories\OrderRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
@@ -16,7 +18,11 @@ use Illuminate\Validation\ValidationException;
 
 class OrderService
 {
-    public function __construct(private OrderRepository $orderRepository) {}
+    public function __construct(
+        private OrderRepository $orderRepository,
+        private LoyaltyOfferRepository $loyaltyOfferRepository,
+        private LoyaltyProgressRepository $loyaltyProgressRepository,
+    ) {}
 
     /**
      * Place a new order for a table. Validates every product belongs to the
@@ -74,6 +80,10 @@ class OrderService
                 'quantity' => $quantity,
                 'special_instructions' => $item['special_instructions'] ?? null,
             ]);
+
+            if ($customerId) {
+                $this->advanceLoyaltyProgress($restaurant->id, $customerId, $product->id, $quantity);
+            }
         }
 
         $order->update(['total_amount' => $total]);
@@ -82,6 +92,21 @@ class OrderService
         event(new OrderCreated($order));
 
         return $order;
+    }
+
+    /**
+     * Credits every active loyalty offer this product purchase counts
+     * toward (one tied to this exact product, or a restaurant-wide "any
+     * product" offer) — the "buy 4 coffees" punch card fills up here,
+     * purely from normal ordering. Guest orders (no customerId) earn nothing.
+     */
+    private function advanceLoyaltyProgress(int $restaurantId, int $customerId, int $productId, int $quantity): void
+    {
+        $offers = $this->loyaltyOfferRepository->getActiveForRestaurantAndProduct($restaurantId, $productId);
+
+        foreach ($offers as $offer) {
+            $this->loyaltyProgressRepository->incrementProgress($customerId, $offer->id, $quantity);
+        }
     }
 
     public function findForRestaurant(int $id, int $restaurantId): ?Order
@@ -97,6 +122,11 @@ class OrderService
     public function findForCustomer(int $id, int $customerId): ?Order
     {
         return $this->orderRepository->findByIdForCustomer($id, $customerId);
+    }
+
+    public function listForCustomer(int $customerId): Collection
+    {
+        return $this->orderRepository->getAllForCustomer($customerId);
     }
 
     /**
