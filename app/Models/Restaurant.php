@@ -25,6 +25,7 @@ class Restaurant extends Model
         'description',
         'currency',
         'logo',
+        'banner',
         'status',
         'primary_color',
         'secondary_color',
@@ -100,5 +101,10 @@ class Restaurant extends Model
     protected function logoUrl(): Attribute
     {
         return Attribute::get(fn (): ?string => $this->logo ? Storage::disk('public')->url($this->logo) : null);
+    }
+
+    protected function bannerUrl(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->banner ? Storage::disk('public')->url($this->banner) : null);
     }
 }

@@ -578,7 +578,7 @@
               }
             },
             {
-              "name": "Update Restaurant Settings (upload logo)",
+              "name": "Update Restaurant Settings (upload logo/banner)",
               "request": {
                 "method": "POST",
                 "header": [{ "key": "Accept", "value": "application/json" }],
@@ -587,11 +587,12 @@
                   "mode": "formdata",
                   "formdata": [
                     { "key": "_method", "value": "PUT", "type": "text", "description": "Laravel method-spoofing: file uploads must be multipart, which HTML/Postman cannot send as PUT directly." },
-                    { "key": "logo", "type": "file", "src": [] }
+                    { "key": "logo", "type": "file", "src": [] },
+                    { "key": "banner", "type": "file", "src": [], "disabled": true, "description": "Optional. Enable and pick a wide banner image for the restaurant's public menu page." }
                   ]
                 },
                 "url": { "raw": "{{base_url}}/api/owner/restaurant-settings", "host": ["{{base_url}}"], "path": ["api", "owner", "restaurant-settings"] },
-                "description": "Sent as POST + _method=PUT because file uploads require multipart/form-data. Pick a logo file in the 'logo' field before sending."
+                "description": "Sent as POST + _method=PUT because file uploads require multipart/form-data. Pick a logo and/or banner file before sending — both are optional and independent (uploading one doesn't require the other). logo max 2MB, banner max 4MB. Replacing either deletes the old file from storage."
               }
             },
             {

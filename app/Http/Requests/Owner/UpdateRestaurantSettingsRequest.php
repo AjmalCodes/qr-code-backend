@@ -38,6 +38,7 @@ class UpdateRestaurantSettingsRequest extends FormRequest
             'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'currency' => ['sometimes', 'required', 'string', 'size:3'],
             'logo' => ['sometimes', 'nullable', 'image', 'max:2048'],
+            'banner' => ['sometimes', 'nullable', 'image', 'max:4096'],
         ];
     }
 }

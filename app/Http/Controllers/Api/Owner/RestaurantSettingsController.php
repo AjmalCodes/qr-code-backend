@@ -18,7 +18,8 @@ class RestaurantSettingsController extends Controller
 
     /**
      * Update the restaurant's name, description, contact details, currency,
-     * and logo. Send as multipart/form-data (with `_method=PUT`) to upload a logo.
+     * logo, and banner. Send as multipart/form-data (with `_method=PUT`) to
+     * upload a logo and/or banner.
      */
     public function update(UpdateRestaurantSettingsRequest $request): JsonResponse
     {
@@ -27,8 +28,9 @@ class RestaurantSettingsController extends Controller
 
         $restaurant = $this->restaurantSettingsService->updateSettings(
             $restaurant,
-            $request->safe()->except('logo'),
+            $request->safe()->except(['logo', 'banner']),
             $request->file('logo'),
+            $request->file('banner'),
         );
 
         return $this->success(new RestaurantResource($restaurant), 'Restaurant settings updated successfully');

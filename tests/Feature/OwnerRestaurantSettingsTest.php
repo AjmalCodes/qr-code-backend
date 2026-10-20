@@ -64,6 +64,72 @@ test('owner can upload and replace a restaurant logo', function () {
     Storage::disk('public')->assertExists($restaurant->logo);
 });
 
+test('owner can upload and replace a restaurant banner', function () {
+    Storage::fake('public');
+
+    ['token' => $token, 'restaurant' => $restaurant] = createOwnerWithRestaurant();
+
+    $firstBanner = UploadedFile::fake()->image('banner.jpg');
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->post('/api/owner/restaurant-settings', [
+            '_method' => 'PUT',
+            'banner' => $firstBanner,
+        ]);
+
+    $response->assertStatus(200);
+    $restaurant->refresh();
+    expect($restaurant->banner)->not->toBeNull();
+    Storage::disk('public')->assertExists($restaurant->banner);
+
+    $originalBannerPath = $restaurant->banner;
+    $secondBanner = UploadedFile::fake()->image('new-banner.png');
+
+    $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->post('/api/owner/restaurant-settings', [
+            '_method' => 'PUT',
+            'banner' => $secondBanner,
+        ])->assertStatus(200);
+
+    $restaurant->refresh();
+    Storage::disk('public')->assertMissing($originalBannerPath);
+    Storage::disk('public')->assertExists($restaurant->banner);
+});
+
+test('a logo and banner can be uploaded together without interfering with each other', function () {
+    Storage::fake('public');
+
+    ['token' => $token, 'restaurant' => $restaurant] = createOwnerWithRestaurant();
+
+    $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->post('/api/owner/restaurant-settings', [
+            '_method' => 'PUT',
+            'logo' => UploadedFile::fake()->image('logo.jpg'),
+            'banner' => UploadedFile::fake()->image('banner.jpg'),
+        ])->assertStatus(200);
+
+    $restaurant->refresh();
+    expect($restaurant->logo)->not->toBeNull();
+    expect($restaurant->banner)->not->toBeNull();
+    Storage::disk('public')->assertExists($restaurant->logo);
+    Storage::disk('public')->assertExists($restaurant->banner);
+});
+
+test('restaurant settings update rejects a non-image banner', function () {
+    Storage::fake('public');
+
+    ['token' => $token] = createOwnerWithRestaurant();
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->post('/api/owner/restaurant-settings', [
+            '_method' => 'PUT',
+            'banner' => UploadedFile::fake()->create('document.pdf', 100),
+        ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['banner']);
+});
+
 test('restaurant settings update rejects a non-image logo', function () {
     Storage::fake('public');
 

@@ -11,12 +11,18 @@ class RestaurantSettingsService
 {
     private const LOGO_DIRECTORY = 'restaurants/logos';
 
+    private const BANNER_DIRECTORY = 'restaurants/banners';
+
     public function __construct(private RestaurantRepository $restaurantRepository) {}
 
-    public function updateSettings(Restaurant $restaurant, array $data, ?UploadedFile $logo = null): Restaurant
+    public function updateSettings(Restaurant $restaurant, array $data, ?UploadedFile $logo = null, ?UploadedFile $banner = null): Restaurant
     {
         if ($logo) {
-            $data['logo'] = $this->replaceLogo($restaurant, $logo);
+            $data['logo'] = $this->replaceImage($restaurant->logo, $logo, self::LOGO_DIRECTORY);
+        }
+
+        if ($banner) {
+            $data['banner'] = $this->replaceImage($restaurant->banner, $banner, self::BANNER_DIRECTORY);
         }
 
         $this->restaurantRepository->update($restaurant, $data);
@@ -24,12 +30,12 @@ class RestaurantSettingsService
         return $restaurant->fresh();
     }
 
-    private function replaceLogo(Restaurant $restaurant, UploadedFile $logo): string
+    private function replaceImage(?string $existingPath, UploadedFile $image, string $directory): string
     {
-        if ($restaurant->logo) {
-            Storage::disk('public')->delete($restaurant->logo);
+        if ($existingPath) {
+            Storage::disk('public')->delete($existingPath);
         }
 
-        return $logo->store(self::LOGO_DIRECTORY, 'public');
+        return $image->store($directory, 'public');
     }
 }
