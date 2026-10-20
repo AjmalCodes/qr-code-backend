@@ -4,15 +4,15 @@ namespace App\Services\Owner;
 
 use App\Models\LoyaltyOffer;
 use App\Repositories\LoyaltyOfferRepository;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class LoyaltyOfferService
 {
     public function __construct(private LoyaltyOfferRepository $loyaltyOfferRepository) {}
 
-    public function list(int $restaurantId): Collection
+    public function list(int $restaurantId, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->loyaltyOfferRepository->getAllForRestaurant($restaurantId);
+        return $this->loyaltyOfferRepository->getAllForRestaurant($restaurantId, $perPage);
     }
 
     public function find(int $id, int $restaurantId): ?LoyaltyOffer

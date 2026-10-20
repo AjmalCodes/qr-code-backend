@@ -30,12 +30,13 @@ class LoyaltyController extends Controller
      * Active loyalty offers for a restaurant, shown directly in the QR menu,
      * each with the authenticated customer's own progress ("2/4 coffees")
      * and whether it's ready to redeem right now. Identify the restaurant
-     * with ?restaurant_slug=.
+     * with ?restaurant_slug=. Paginated via ?per_page= (defaults to 15, max 100).
      */
     public function activeOffers(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'restaurant_slug' => ['required', 'string'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 
         $restaurant = $this->restaurantService->findActiveBySlug($validated['restaurant_slug']);
@@ -44,13 +45,13 @@ class LoyaltyController extends Controller
             return $this->error('Restaurant not found.', null, 404);
         }
 
-        $offers = $this->loyaltyOfferRepository->getActiveForRestaurant($restaurant->id);
+        $offers = $this->loyaltyOfferRepository->getActiveForRestaurant($restaurant->id, $validated['per_page'] ?? 15);
 
         /** @var Customer $customer */
         $customer = $request->user('customer');
         $progressByOffer = $this->loyaltyProgressRepository->getForCustomer($customer->id);
 
-        return $this->success($offers->map(function (LoyaltyOffer $offer) use ($progressByOffer) {
+        $data = collect($offers->items())->map(function (LoyaltyOffer $offer) use ($progressByOffer) {
             $progress = min($progressByOffer->get($offer->id)?->progress_count ?? 0, $offer->buy_quantity);
 
             return [
@@ -63,7 +64,9 @@ class LoyaltyController extends Controller
                 'progress' => $progress,
                 'is_redeemable' => $progress >= $offer->buy_quantity,
             ];
-        }));
+        });
+
+        return $this->successPaginated($data, $offers);
     }
 
     /**

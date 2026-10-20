@@ -18,11 +18,19 @@ class LoyaltyOfferController extends Controller
 
     public function __construct(private LoyaltyOfferService $loyaltyOfferService) {}
 
+    /**
+     * All loyalty offers for the authenticated owner's restaurant, paginated
+     * via ?per_page= (defaults to 15, max 100).
+     */
     public function index(Request $request): JsonResponse
     {
-        $offers = $this->loyaltyOfferService->list($this->tenant($request)->id);
+        $filters = $request->validate([
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
 
-        return $this->success(LoyaltyOfferResource::collection($offers));
+        $offers = $this->loyaltyOfferService->list($this->tenant($request)->id, $filters['per_page'] ?? 15);
+
+        return $this->successPaginated(LoyaltyOfferResource::collection($offers), $offers);
     }
 
     public function store(StoreLoyaltyOfferRequest $request): JsonResponse

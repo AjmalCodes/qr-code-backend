@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\LoyaltyOffer;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 class LoyaltyOfferRepository
@@ -17,14 +18,14 @@ class LoyaltyOfferRepository
         return LoyaltyOffer::where('restaurant_id', $restaurantId)->find($id);
     }
 
-    public function getAllForRestaurant(int $restaurantId): Collection
+    public function getAllForRestaurant(int $restaurantId, int $perPage = 15): LengthAwarePaginator
     {
-        return LoyaltyOffer::where('restaurant_id', $restaurantId)->latest()->get();
+        return LoyaltyOffer::where('restaurant_id', $restaurantId)->latest()->paginate($perPage);
     }
 
-    public function getActiveForRestaurant(int $restaurantId): Collection
+    public function getActiveForRestaurant(int $restaurantId, int $perPage = 15): LengthAwarePaginator
     {
-        return LoyaltyOffer::where('restaurant_id', $restaurantId)->where('is_active', true)->latest()->get();
+        return LoyaltyOffer::where('restaurant_id', $restaurantId)->where('is_active', true)->latest()->paginate($perPage);
     }
 
     /**

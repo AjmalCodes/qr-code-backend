@@ -20,6 +20,20 @@ test('active offers are listed for a restaurant by slug', function () {
         ->assertJsonMissing(['title' => 'Inactive Offer']);
 });
 
+test('active offers list is paginated with a per_page override', function () {
+    ['restaurant' => $restaurant] = createOwnerWithRestaurant();
+    LoyaltyOffer::factory()->count(5)->create(['restaurant_id' => $restaurant->id, 'is_active' => true]);
+
+    ['token' => $token] = createVerifiedCustomer();
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->getJson("/api/customer/loyalty/active-offers?restaurant_slug={$restaurant->slug}&per_page=2");
+
+    $response->assertStatus(200)
+        ->assertJsonCount(2, 'data')
+        ->assertJson(['meta' => ['current_page' => 1, 'last_page' => 3, 'per_page' => 2, 'total' => 5]]);
+});
+
 test('active offers show the customers own progress and redeemability', function () {
     ['restaurant' => $restaurant] = createOwnerWithRestaurant();
     $offer = LoyaltyOffer::factory()->create(['restaurant_id' => $restaurant->id, 'is_active' => true, 'buy_quantity' => 4]);
@@ -155,6 +169,38 @@ test('claiming an inactive offer is rejected', function () {
         ->postJson('/api/customer/loyalty/claims', ['loyalty_offer_id' => $offer->id]);
 
     $response->assertStatus(422);
+});
+
+test('one customer account tracks loyalty progress separately per restaurant', function () {
+    ['restaurant' => $restaurantA] = createOwnerWithRestaurant();
+    ['restaurant' => $restaurantB] = createOwnerWithRestaurant();
+    $offerA = LoyaltyOffer::factory()->create(['restaurant_id' => $restaurantA->id, 'is_active' => true, 'buy_quantity' => 4]);
+    $offerB = LoyaltyOffer::factory()->create(['restaurant_id' => $restaurantB->id, 'is_active' => true, 'buy_quantity' => 4]);
+
+    ['token' => $token, 'customer' => $customer] = createVerifiedCustomer();
+    LoyaltyProgress::factory()->create(['customer_id' => $customer->id, 'loyalty_offer_id' => $offerA->id, 'progress_count' => 4]);
+    LoyaltyProgress::factory()->create(['customer_id' => $customer->id, 'loyalty_offer_id' => $offerB->id, 'progress_count' => 1]);
+
+    // Fully earned at restaurant A — redeemable there.
+    $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->getJson("/api/customer/loyalty/active-offers?restaurant_slug={$restaurantA->slug}")
+        ->assertJson(['data' => [['progress' => 4, 'is_redeemable' => true]]]);
+
+    // Barely started at restaurant B — not redeemable there, independent of A.
+    $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->getJson("/api/customer/loyalty/active-offers?restaurant_slug={$restaurantB->slug}")
+        ->assertJson(['data' => [['progress' => 1, 'is_redeemable' => false]]]);
+
+    // The same account can claim at restaurant A without touching B's progress.
+    $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->postJson('/api/customer/loyalty/claims', ['loyalty_offer_id' => $offerA->id])
+        ->assertStatus(201);
+
+    $this->assertDatabaseHas('loyalty_progress', [
+        'customer_id' => $customer->id,
+        'loyalty_offer_id' => $offerB->id,
+        'progress_count' => 1,
+    ]);
 });
 
 test('claiming requires an unauthenticated guest to log in first', function () {

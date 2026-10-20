@@ -1149,7 +1149,13 @@
                 "method": "GET",
                 "header": [{ "key": "Accept", "value": "application/json" }],
                 "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
-                "url": { "raw": "{{base_url}}/api/owner/loyalty-offers", "host": ["{{base_url}}"], "path": ["api", "owner", "loyalty-offers"] }
+                "url": {
+                  "raw": "{{base_url}}/api/owner/loyalty-offers?per_page=15",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "owner", "loyalty-offers"],
+                  "query": [{ "key": "per_page", "value": "15", "description": "Optional, 1-100, defaults to 15." }]
+                },
+                "description": "Paginated — response includes a top-level \"meta\" object ({current_page, last_page, per_page, total}) alongside \"data\"."
               }
             },
             {
@@ -1559,12 +1565,15 @@
             "header": [{ "key": "Accept", "value": "application/json" }],
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customer_token}}", "type": "string" }] },
             "url": {
-              "raw": "{{base_url}}/api/customer/loyalty/active-offers?restaurant_slug={{restaurant_slug}}",
+              "raw": "{{base_url}}/api/customer/loyalty/active-offers?restaurant_slug={{restaurant_slug}}&per_page=15",
               "host": ["{{base_url}}"],
               "path": ["api", "customer", "loyalty", "active-offers"],
-              "query": [{ "key": "restaurant_slug", "value": "{{restaurant_slug}}" }]
+              "query": [
+                { "key": "restaurant_slug", "value": "{{restaurant_slug}}" },
+                { "key": "per_page", "value": "15", "description": "Optional, 1-100, defaults to 15." }
+              ]
             },
-            "description": "Shown directly in the QR menu. Requires a logged-in customer (but not necessarily verified) to view. Each offer includes this customer's own progress (e.g. 2 of 4 coffees bought) and is_redeemable (true once progress reaches buy_quantity) — progress builds automatically from Place Order, not from any separate action."
+            "description": "Shown directly in the QR menu. Requires a logged-in customer (but not necessarily verified) to view. Each offer includes this customer's own progress (e.g. 2 of 4 coffees bought) and is_redeemable (true once progress reaches buy_quantity) — progress builds automatically from Place Order, not from any separate action. Paginated — response includes a top-level \"meta\" object ({current_page, last_page, per_page, total}) alongside \"data\"."
           }
         },
         {
