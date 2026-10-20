@@ -56,6 +56,56 @@ test('owner can create a category', function () {
     ]);
 });
 
+test('creating a category at a taken sorting order shifts the existing one back', function () {
+    ['token' => $token, 'restaurant' => $restaurant] = createOwnerWithRestaurant();
+    $pizza = Category::factory()->create(['restaurant_id' => $restaurant->id, 'name' => 'Pizza', 'sorting_order' => 1]);
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->postJson('/api/owner/categories', ['name' => 'Burger', 'sorting_order' => 1]);
+
+    $response->assertStatus(201)->assertJson(['data' => ['name' => 'Burger', 'sorting_order' => 1]]);
+
+    expect($pizza->fresh()->sorting_order)->toBe(2);
+});
+
+test('a category created without a sorting order is appended after the existing ones', function () {
+    ['token' => $token, 'restaurant' => $restaurant] = createOwnerWithRestaurant();
+    Category::factory()->count(2)->create(['restaurant_id' => $restaurant->id]);
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->postJson('/api/owner/categories', ['name' => 'Desserts']);
+
+    $response->assertStatus(201)->assertJson(['data' => ['sorting_order' => 2]]);
+});
+
+test('moving a category forward pulls the ones in between back by one', function () {
+    ['token' => $token, 'restaurant' => $restaurant] = createOwnerWithRestaurant();
+    $a = Category::factory()->create(['restaurant_id' => $restaurant->id, 'sorting_order' => 1]);
+    $b = Category::factory()->create(['restaurant_id' => $restaurant->id, 'sorting_order' => 2]);
+    $c = Category::factory()->create(['restaurant_id' => $restaurant->id, 'sorting_order' => 3]);
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->putJson("/api/owner/categories/{$a->id}", ['sorting_order' => 3]);
+
+    $response->assertStatus(200)->assertJson(['data' => ['sorting_order' => 3]]);
+    expect($b->fresh()->sorting_order)->toBe(1);
+    expect($c->fresh()->sorting_order)->toBe(2);
+});
+
+test('moving a category backward pushes the ones in between forward by one', function () {
+    ['token' => $token, 'restaurant' => $restaurant] = createOwnerWithRestaurant();
+    $a = Category::factory()->create(['restaurant_id' => $restaurant->id, 'sorting_order' => 1]);
+    $b = Category::factory()->create(['restaurant_id' => $restaurant->id, 'sorting_order' => 2]);
+    $c = Category::factory()->create(['restaurant_id' => $restaurant->id, 'sorting_order' => 3]);
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->putJson("/api/owner/categories/{$c->id}", ['sorting_order' => 1]);
+
+    $response->assertStatus(200)->assertJson(['data' => ['sorting_order' => 1]]);
+    expect($a->fresh()->sorting_order)->toBe(2);
+    expect($b->fresh()->sorting_order)->toBe(3);
+});
+
 test('category name is required', function () {
     ['token' => $token] = createOwnerWithRestaurant();
 

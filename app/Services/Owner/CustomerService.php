@@ -3,6 +3,7 @@
 namespace App\Services\Owner;
 
 use App\Repositories\CustomerRepository;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 
 class CustomerService
@@ -14,8 +15,8 @@ class CustomerService
         return $this->customerRepository->getForRestaurant($restaurantId);
     }
 
-    public function countForRestaurant(int $restaurantId): int
+    public function countForRestaurant(int $restaurantId, ?CarbonInterface $from = null, ?CarbonInterface $to = null): int
     {
-        return $this->customerRepository->countForRestaurant($restaurantId);
+        return $this->customerRepository->countForRestaurant($restaurantId, $from, $to);
     }
 }

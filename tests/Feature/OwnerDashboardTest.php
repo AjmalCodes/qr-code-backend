@@ -43,7 +43,7 @@ test('owner can view their dashboard stats', function () {
                 'total_customers',
                 'subscription' => ['plan_name', 'status', 'remaining_days'],
                 'monthly_stats' => [
-                    '*' => ['year', 'month', 'label', 'orders', 'revenue'],
+                    '*' => ['year', 'month', 'label', 'orders', 'revenue', 'scans', 'customers'],
                 ],
                 'recent_orders' => [
                     '*' => ['id', 'order_number', 'table', 'status', 'total_amount', 'items', 'created_at'],
@@ -68,6 +68,11 @@ test('owner can view their dashboard stats', function () {
     $byTable = collect($response->json('data.qr_scans.by_table'))->keyBy('table_id');
     expect($byTable->get($tables[0]->id)['scans'])->toBe(2);
     expect($byTable->get($tables[1]->id)['scans'])->toBe(1);
+
+    $currentMonth = collect($response->json('data.monthly_stats'))->last();
+    expect($currentMonth['orders'])->toBe(2);
+    expect($currentMonth['scans'])->toBe(3);
+    expect($currentMonth['customers'])->toBe(1);
 });
 
 test('owner dashboard only reflects their own restaurant data', function () {

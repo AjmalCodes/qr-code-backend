@@ -10,6 +10,7 @@ use App\Models\Restaurant;
 use App\Repositories\CategoryRepository;
 use App\Repositories\OrderRepository;
 use App\Repositories\ProductRepository;
+use App\Repositories\QrScanRepository;
 use App\Repositories\RestaurantTableRepository;
 use App\Services\SubscriptionService;
 use Carbon\CarbonInterface;
@@ -22,6 +23,7 @@ class DashboardService
         private CategoryRepository $categoryRepository,
         private ProductRepository $productRepository,
         private RestaurantTableRepository $tableRepository,
+        private QrScanRepository $qrScanRepository,
         private QrAnalyticsService $qrAnalyticsService,
         private CustomerService $customerService,
         private SubscriptionService $subscriptionService,
@@ -86,9 +88,10 @@ class DashboardService
     }
 
     /**
-     * Last 12 months of order counts and revenue for this restaurant, for
-     * the dashboard's month-wise graph — always a fixed trailing window,
-     * independent of any $from/$to filter applied to the other figures.
+     * Last 12 months of orders, revenue, QR scans, and distinct customers
+     * for this restaurant, for the dashboard's month-wise graph — always a
+     * fixed trailing window, independent of any $from/$to filter applied to
+     * the other figures.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -106,6 +109,8 @@ class DashboardService
                 'label' => $monthStart->format('M Y'),
                 'orders' => $this->orderRepository->countForRestaurant($restaurantId, $monthStart, $monthEnd),
                 'revenue' => $this->orderRepository->sumRevenueForRestaurant($restaurantId, $monthStart, $monthEnd),
+                'scans' => $this->qrScanRepository->countForRestaurant($restaurantId, $monthStart, $monthEnd),
+                'customers' => $this->customerService->countForRestaurant($restaurantId, $monthStart, $monthEnd),
             ];
         }
 

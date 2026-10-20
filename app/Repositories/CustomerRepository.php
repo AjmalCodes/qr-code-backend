@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Customer;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 
 class CustomerRepository
@@ -31,11 +32,17 @@ class CustomerRepository
     /**
      * How many distinct registered customers have placed at least one order
      * with this restaurant — guest orders (no customer_id) don't count.
+     * Pass $from/$to to count only customers who ordered within that range
+     * (e.g. for a month-wise breakdown) instead of all-time.
      */
-    public function countForRestaurant(int $restaurantId): int
+    public function countForRestaurant(int $restaurantId, ?CarbonInterface $from = null, ?CarbonInterface $to = null): int
     {
         return Customer::query()
-            ->whereHas('orders', fn ($query) => $query->where('restaurant_id', $restaurantId))
+            ->whereHas('orders', function ($query) use ($restaurantId, $from, $to) {
+                $query->where('restaurant_id', $restaurantId)
+                    ->when($from, fn ($query) => $query->where('created_at', '>=', $from))
+                    ->when($to, fn ($query) => $query->where('created_at', '<=', $to));
+            })
             ->count();
     }
 

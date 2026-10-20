@@ -47,7 +47,12 @@ class DemoDataSeeder extends Seeder
             'category_id' => $category->id,
         ]));
 
-        $tables = RestaurantTable::factory()->count(5)->create(['restaurant_id' => $restaurant->id]);
+        // Explicit "Table 1".."Table 5" labels (not the factory's random
+        // default) so QR scan/order breakdowns read clearly per table.
+        $tables = collect(range(1, 5))->map(fn (int $number) => RestaurantTable::factory()->create([
+            'restaurant_id' => $restaurant->id,
+            'label' => "Table {$number}",
+        ]));
 
         User::factory()->count(2)->create([
             'role' => UserRole::Waiter->value,

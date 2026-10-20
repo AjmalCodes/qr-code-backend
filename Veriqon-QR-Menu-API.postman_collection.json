@@ -750,7 +750,7 @@
                   "options": { "raw": { "language": "json" } }
                 },
                 "url": { "raw": "{{base_url}}/api/owner/categories", "host": ["{{base_url}}"], "path": ["api", "owner", "categories"] },
-                "description": "name is required. description, sorting_order, status (active|inactive, defaults to active) are optional."
+                "description": "name is required. description, sorting_order, status (active|inactive, defaults to active) are optional. Omitting sorting_order appends the category after all existing ones; giving a sorting_order already used by another category bumps that one (and everything after it) back by one instead of creating a duplicate — e.g. Pizza at 1, then creating Burger at 1 makes Burger 1 and Pizza 2."
               },
               "event": [
                 {
@@ -789,7 +789,8 @@
                   "raw": "{\n  \"name\": \"Pizzas & Flatbreads\",\n  \"sorting_order\": 2\n}",
                   "options": { "raw": { "language": "json" } }
                 },
-                "url": { "raw": "{{base_url}}/api/owner/categories/{{category_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "categories", "{{category_id}}"] }
+                "url": { "raw": "{{base_url}}/api/owner/categories/{{category_id}}", "host": ["{{base_url}}"], "path": ["api", "owner", "categories", "{{category_id}}"] },
+                "description": "Changing sorting_order to a value already used by another category reorders the list: moving a category forward pulls the ones in between back by one, moving it backward pushes them forward by one — so the new position is always unique and the rest stay in a contiguous order."
               }
             },
             {
