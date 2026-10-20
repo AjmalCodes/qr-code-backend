@@ -5,7 +5,7 @@ namespace App\Services\Owner;
 use App\Enums\ProductStatus;
 use App\Models\Product;
 use App\Repositories\ProductRepository;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -18,9 +18,9 @@ class ProductService
     /**
      * @param  array{category_id?: int, status?: string}  $filters
      */
-    public function list(int $restaurantId, array $filters = []): Collection
+    public function list(int $restaurantId, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        return $this->productRepository->getAllForRestaurant($restaurantId, $filters);
+        return $this->productRepository->getAllForRestaurant($restaurantId, $filters, $perPage);
     }
 
     public function find(int $id, int $restaurantId): ?Product

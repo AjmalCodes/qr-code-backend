@@ -3,7 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Category;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class CategoryRepository
 {
@@ -21,12 +21,12 @@ class CategoryRepository
         return Category::where('restaurant_id', $restaurantId)->find($id);
     }
 
-    public function getAllForRestaurant(int $restaurantId): Collection
+    public function getAllForRestaurant(int $restaurantId, int $perPage = 15): LengthAwarePaginator
     {
         return Category::where('restaurant_id', $restaurantId)
             ->orderBy('sorting_order')
             ->orderBy('id')
-            ->get();
+            ->paginate($perPage);
     }
 
     public function countForRestaurant(int $restaurantId): int

@@ -56,7 +56,7 @@
                             <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
                                 <tr>
                                     <td style="border-radius:6px; background-color:#3b82f6;">
-                                        <a href="{{ config('app.url') }}/login"
+                                        <a href="{{ config('app.frontend_url') }}/login"
                                            style="display:inline-block; padding:12px 24px; color:#ffffff; text-decoration:none; font-size:14px; font-weight:600;">
                                             Login to Your Portal
                                         </a>

@@ -15,6 +15,18 @@ test('owner can list their products', function () {
     $response->assertStatus(200)->assertJsonCount(3, 'data');
 });
 
+test('owner product list is paginated with a per_page override', function () {
+    ['token' => $token, 'restaurant' => $restaurant] = createOwnerWithRestaurant();
+    Product::factory()->count(5)->create(['restaurant_id' => $restaurant->id]);
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->getJson('/api/owner/products?per_page=2');
+
+    $response->assertStatus(200)
+        ->assertJsonCount(2, 'data')
+        ->assertJson(['meta' => ['current_page' => 1, 'last_page' => 3, 'per_page' => 2, 'total' => 5]]);
+});
+
 test('owner only sees their own restaurant products', function () {
     ['token' => $token] = createOwnerWithRestaurant();
     ['restaurant' => $otherRestaurant] = createOwnerWithRestaurant();

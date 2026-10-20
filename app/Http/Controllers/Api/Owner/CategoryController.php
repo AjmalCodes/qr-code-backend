@@ -19,13 +19,18 @@ class CategoryController extends Controller
     public function __construct(private CategoryService $categoryService) {}
 
     /**
-     * List all categories for the authenticated owner's restaurant, in sort order.
+     * List all categories for the authenticated owner's restaurant, in sort
+     * order, paginated via ?per_page= (defaults to 15, max 100).
      */
     public function index(Request $request): JsonResponse
     {
-        $categories = $this->categoryService->list($this->tenant($request)->id);
+        $filters = $request->validate([
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
 
-        return $this->success(CategoryResource::collection($categories));
+        $categories = $this->categoryService->list($this->tenant($request)->id, $filters['per_page'] ?? 15);
+
+        return $this->successPaginated(CategoryResource::collection($categories), $categories);
     }
 
     /**

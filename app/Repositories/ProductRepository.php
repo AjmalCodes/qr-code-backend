@@ -3,7 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Product;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ProductRepository
 {
@@ -24,14 +24,14 @@ class ProductRepository
     /**
      * @param  array{category_id?: int, status?: string}  $filters
      */
-    public function getAllForRestaurant(int $restaurantId, array $filters = []): Collection
+    public function getAllForRestaurant(int $restaurantId, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         return Product::with('category')
             ->where('restaurant_id', $restaurantId)
             ->when(isset($filters['category_id']), fn ($query) => $query->where('category_id', $filters['category_id']))
             ->when(isset($filters['status']), fn ($query) => $query->where('status', $filters['status']))
             ->latest()
-            ->get();
+            ->paginate($perPage);
     }
 
     public function countForRestaurant(int $restaurantId): int

@@ -20,19 +20,26 @@ class CustomerController extends Controller
      * Registered customers who have ordered from this restaurant, with
      * their order count, total spend, and last order date. Guest orders
      * (no account) are not included — there is no customer identity to show.
+     * Paginated via ?per_page= (defaults to 15, max 100).
      */
     public function index(Request $request): JsonResponse
     {
-        $customers = $this->customerService->listForRestaurant($this->tenant($request)->id);
+        $filters = $request->validate([
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
 
-        return $this->success($customers->map(fn (Customer $c) => [
+        $customers = $this->customerService->listForRestaurant($this->tenant($request)->id, $filters['per_page'] ?? 15);
+
+        $data = collect($customers->items())->map(fn (Customer $c) => [
             'id' => $c->id,
             'name' => $c->name,
             'email' => $c->email,
             'orders_count' => $c->orders_count,
             'total_spent' => (float) ($c->orders_sum_total_amount ?? 0),
             'last_order_at' => $c->orders_max_created_at,
-        ]));
+        ]);
+
+        return $this->successPaginated($data, $customers);
     }
 
     private function tenant(Request $request): Restaurant

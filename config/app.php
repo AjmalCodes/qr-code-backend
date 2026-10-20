@@ -56,6 +56,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | The origin of the separate frontend/SPA that customers and restaurant
+    | owners actually use — distinct from APP_URL, which is this backend
+    | API's own address. Used when building links in emails (e.g. the
+    | "Login to Your Portal" link sent to a newly created restaurant owner).
+    |
+    */
+
+    'frontend_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:5173'), '/'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

@@ -22,18 +22,20 @@ class ProductController extends Controller
 
     /**
      * List products for the authenticated owner's restaurant, optionally
-     * filtered by ?category_id= and ?status=.
+     * filtered by ?category_id= and ?status=, paginated via ?per_page=
+     * (defaults to 15, max 100).
      */
     public function index(Request $request): JsonResponse
     {
         $filters = $request->validate([
             'category_id' => ['sometimes', 'integer'],
             'status' => ['sometimes', 'string'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $products = $this->productService->list($this->tenant($request)->id, $filters);
+        $products = $this->productService->list($this->tenant($request)->id, $filters, $filters['per_page'] ?? 15);
 
-        return $this->success(ProductResource::collection($products));
+        return $this->successPaginated(ProductResource::collection($products), $products);
     }
 
     /**

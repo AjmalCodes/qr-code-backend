@@ -717,8 +717,13 @@
                 "method": "GET",
                 "header": [{ "key": "Accept", "value": "application/json" }],
                 "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
-                "url": { "raw": "{{base_url}}/api/owner/customers", "host": ["{{base_url}}"], "path": ["api", "owner", "customers"] },
-                "description": "Registered customers who have ordered from this restaurant, with their order count, total spend, and last order date for this restaurant specifically. Guest orders (no account) are not included."
+                "url": {
+                  "raw": "{{base_url}}/api/owner/customers?per_page=15",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "owner", "customers"],
+                  "query": [{ "key": "per_page", "value": "15", "description": "Optional, 1-100, defaults to 15." }]
+                },
+                "description": "Registered customers who have ordered from this restaurant, with their order count, total spend, and last order date for this restaurant specifically. Guest orders (no account) are not included. Paginated — response includes a top-level \"meta\" object ({current_page, last_page, per_page, total}) alongside \"data\"."
               }
             }
           ]
@@ -732,7 +737,13 @@
                 "method": "GET",
                 "header": [{ "key": "Accept", "value": "application/json" }],
                 "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
-                "url": { "raw": "{{base_url}}/api/owner/categories", "host": ["{{base_url}}"], "path": ["api", "owner", "categories"] }
+                "url": {
+                  "raw": "{{base_url}}/api/owner/categories?per_page=15",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "owner", "categories"],
+                  "query": [{ "key": "per_page", "value": "15", "description": "Optional, 1-100, defaults to 15." }]
+                },
+                "description": "Paginated — response includes a top-level \"meta\" object ({current_page, last_page, per_page, total}) alongside \"data\"."
               }
             },
             {
@@ -823,14 +834,16 @@
                 "header": [{ "key": "Accept", "value": "application/json" }],
                 "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{owner_token}}", "type": "string" }] },
                 "url": {
-                  "raw": "{{base_url}}/api/owner/products?category_id={{category_id}}&status=active",
+                  "raw": "{{base_url}}/api/owner/products?category_id={{category_id}}&status=active&per_page=15",
                   "host": ["{{base_url}}"],
                   "path": ["api", "owner", "products"],
                   "query": [
                     { "key": "category_id", "value": "{{category_id}}" },
-                    { "key": "status", "value": "active", "description": "active | inactive | out_of_stock" }
+                    { "key": "status", "value": "active", "description": "active | inactive | out_of_stock" },
+                    { "key": "per_page", "value": "15", "description": "Optional, 1-100, defaults to 15." }
                   ]
-                }
+                },
+                "description": "Paginated — response includes a top-level \"meta\" object ({current_page, last_page, per_page, total}) alongside \"data\"."
               }
             },
             {

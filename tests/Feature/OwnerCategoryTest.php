@@ -18,6 +18,18 @@ test('owner can list their categories in sorting order', function () {
     expect($names->first())->toBe('Starters');
 });
 
+test('owner category list is paginated with a per_page override', function () {
+    ['token' => $token, 'restaurant' => $restaurant] = createOwnerWithRestaurant();
+    Category::factory()->count(5)->create(['restaurant_id' => $restaurant->id]);
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->getJson('/api/owner/categories?per_page=2');
+
+    $response->assertStatus(200)
+        ->assertJsonCount(2, 'data')
+        ->assertJson(['meta' => ['current_page' => 1, 'last_page' => 3, 'per_page' => 2, 'total' => 5]]);
+});
+
 test('owner only sees their own restaurant categories', function () {
     ['token' => $token] = createOwnerWithRestaurant();
     ['restaurant' => $otherRestaurant] = createOwnerWithRestaurant();

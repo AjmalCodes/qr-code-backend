@@ -71,6 +71,16 @@ test('super admin receives email when restaurant is created', function () {
     });
 });
 
+test('the restaurant created email links to the frontend login page, not the backend', function () {
+    config(['app.frontend_url' => 'http://localhost:5173']);
+
+    $restaurant = Restaurant::factory()->create(['email' => 'frontend-link@example.com']);
+
+    $html = (new RestaurantCreated($restaurant, 'temp-password'))->render();
+
+    expect($html)->toContain('http://localhost:5173/login');
+});
+
 test('super admin can view all restaurants', function () {
     $superAdmin = User::factory()->create([
         'role' => UserRole::SuperAdmin->value,

@@ -4,7 +4,7 @@ namespace App\Repositories;
 
 use App\Models\Customer;
 use Carbon\CarbonInterface;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class CustomerRepository
 {
@@ -18,7 +18,7 @@ class CustomerRepository
      * restaurant (guest orders have no customer_id, so they never appear
      * here), with per-restaurant order count, spend, and last order date.
      */
-    public function getForRestaurant(int $restaurantId): Collection
+    public function getForRestaurant(int $restaurantId, int $perPage = 15): LengthAwarePaginator
     {
         return Customer::query()
             ->whereHas('orders', fn ($query) => $query->where('restaurant_id', $restaurantId))
@@ -26,7 +26,7 @@ class CustomerRepository
             ->withSum(['orders' => fn ($query) => $query->where('restaurant_id', $restaurantId)], 'total_amount')
             ->withMax(['orders' => fn ($query) => $query->where('restaurant_id', $restaurantId)], 'created_at')
             ->orderByDesc('orders_max_created_at')
-            ->get();
+            ->paginate($perPage);
     }
 
     /**

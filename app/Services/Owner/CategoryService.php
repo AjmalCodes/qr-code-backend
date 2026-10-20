@@ -5,15 +5,15 @@ namespace App\Services\Owner;
 use App\Enums\CategoryStatus;
 use App\Models\Category;
 use App\Repositories\CategoryRepository;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class CategoryService
 {
     public function __construct(private CategoryRepository $categoryRepository) {}
 
-    public function list(int $restaurantId): Collection
+    public function list(int $restaurantId, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->categoryRepository->getAllForRestaurant($restaurantId);
+        return $this->categoryRepository->getAllForRestaurant($restaurantId, $perPage);
     }
 
     public function find(int $id, int $restaurantId): ?Category

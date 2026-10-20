@@ -27,6 +27,20 @@ test('owner can list customers who have ordered from their restaurant', function
         ]);
 });
 
+test('owner customer list is paginated with a per_page override', function () {
+    ['token' => $token, 'restaurant' => $restaurant] = createOwnerWithRestaurant();
+    Customer::factory()->count(5)->create()->each(
+        fn (Customer $customer) => Order::factory()->create(['restaurant_id' => $restaurant->id, 'customer_id' => $customer->id])
+    );
+
+    $response = $this->withHeaders(['Authorization' => "Bearer $token"])
+        ->getJson('/api/owner/customers?per_page=2');
+
+    $response->assertStatus(200)
+        ->assertJsonCount(2, 'data')
+        ->assertJson(['meta' => ['current_page' => 1, 'last_page' => 3, 'per_page' => 2, 'total' => 5]]);
+});
+
 test('guest orders without a customer account do not appear in the customer list', function () {
     ['token' => $token, 'restaurant' => $restaurant] = createOwnerWithRestaurant();
     Order::factory()->create(['restaurant_id' => $restaurant->id, 'customer_id' => null]);
