@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ChangeRestaurantOwnerPasswordRequest;
 use App\Models\Restaurant;
+use App\Services\ProfileService;
 use App\Services\RestaurantService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,7 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class RestaurantController extends Controller
 {
-    public function __construct(private RestaurantService $restaurantService) {}
+    public function __construct(
+        private RestaurantService $restaurantService,
+        private ProfileService $profileService,
+    ) {}
 
     /**
      * List restaurants - Super admin only. Supports ?search=, ?status=, ?per_page=.
@@ -20,7 +25,7 @@ class RestaurantController extends Controller
     {
         $filters = $request->validate([
             'search' => ['sometimes', 'string', 'max:255'],
-            'status' => ['sometimes', 'string', 'in:active,inactive'],
+            'status' => ['sometimes', 'string', 'in:active,inactive,pending'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 
@@ -178,5 +183,21 @@ class RestaurantController extends Controller
                 ] : null,
             ],
         ]);
+    }
+
+    /**
+     * Super Admin resets a restaurant owner's password directly — e.g. when
+     * an owner is locked out and can't use the normal forgot-password flow.
+     * No current password is required, unlike the self-service endpoints.
+     */
+    public function changePassword(ChangeRestaurantOwnerPasswordRequest $request, Restaurant $restaurant): JsonResponse
+    {
+        if (! $restaurant->user) {
+            return response()->json(['message' => 'This restaurant has no owner account.'], 404);
+        }
+
+        $this->profileService->changePassword($restaurant->user, $request->validated('password'));
+
+        return response()->json(['message' => 'Restaurant owner password changed successfully']);
     }
 }

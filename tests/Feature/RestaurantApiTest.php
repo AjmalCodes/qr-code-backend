@@ -4,6 +4,7 @@ use App\Enums\UserRole;
 use App\Mail\RestaurantCreated;
 use App\Models\Restaurant;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 
 test('super admin can create a restaurant', function () {
@@ -249,4 +250,80 @@ test('email must be unique when creating a restaurant', function () {
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['email']);
+});
+
+test('super admin can change a restaurant owners password', function () {
+    $superAdmin = User::factory()->create([
+        'role' => UserRole::SuperAdmin->value,
+    ]);
+    $token = $superAdmin->createToken('api-token')->plainTextToken;
+
+    $restaurant = Restaurant::factory()->create();
+
+    $response = $this->withHeaders([
+        'Authorization' => "Bearer $token",
+    ])->patchJson("/api/restaurants/{$restaurant->id}/change-password", [
+        'password' => 'brand-new-password',
+        'password_confirmation' => 'brand-new-password',
+    ]);
+
+    $response->assertStatus(200)
+        ->assertJson(['message' => 'Restaurant owner password changed successfully']);
+
+    expect(Hash::check('brand-new-password', $restaurant->user->fresh()->password))->toBeTrue();
+});
+
+test('changing a restaurant owners password does not require their current password', function () {
+    $superAdmin = User::factory()->create([
+        'role' => UserRole::SuperAdmin->value,
+    ]);
+    $token = $superAdmin->createToken('api-token')->plainTextToken;
+
+    $restaurant = Restaurant::factory()->create();
+
+    $response = $this->withHeaders([
+        'Authorization' => "Bearer $token",
+    ])->patchJson("/api/restaurants/{$restaurant->id}/change-password", [
+        'password' => 'brand-new-password',
+        'password_confirmation' => 'brand-new-password',
+    ]);
+
+    $response->assertStatus(200);
+});
+
+test('changing a restaurant owners password requires confirmation', function () {
+    $superAdmin = User::factory()->create([
+        'role' => UserRole::SuperAdmin->value,
+    ]);
+    $token = $superAdmin->createToken('api-token')->plainTextToken;
+
+    $restaurant = Restaurant::factory()->create();
+
+    $response = $this->withHeaders([
+        'Authorization' => "Bearer $token",
+    ])->patchJson("/api/restaurants/{$restaurant->id}/change-password", [
+        'password' => 'brand-new-password',
+        'password_confirmation' => 'does-not-match',
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['password']);
+});
+
+test('non-super admin cannot change a restaurant owners password', function () {
+    $regularUser = User::factory()->create([
+        'role' => UserRole::User->value,
+    ]);
+    $token = $regularUser->createToken('api-token')->plainTextToken;
+
+    $restaurant = Restaurant::factory()->create();
+
+    $response = $this->withHeaders([
+        'Authorization' => "Bearer $token",
+    ])->patchJson("/api/restaurants/{$restaurant->id}/change-password", [
+        'password' => 'brand-new-password',
+        'password_confirmation' => 'brand-new-password',
+    ]);
+
+    $response->assertStatus(403);
 });

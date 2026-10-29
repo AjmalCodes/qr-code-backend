@@ -318,6 +318,28 @@
           ]
         },
         {
+          "name": "Change Restaurant Owner Password",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{super_admin_token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"new-secure-password\",\n  \"password_confirmation\": \"new-secure-password\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/restaurants/{{restaurant_id}}/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "restaurants", "{{restaurant_id}}", "change-password"]
+            },
+            "description": "Super Admin resets this restaurant's owner password directly — e.g. an owner is locked out. No current_password is required, unlike the self-service \"change my own password\" endpoints. password is required, confirmed, min 8 characters."
+          }
+        },
+        {
           "name": "List Restaurant Owners (deduped by user)",
           "request": {
             "method": "GET",
@@ -464,6 +486,23 @@
         {
           "name": "Auth & Account",
           "item": [
+            {
+              "name": "Owner Self-Register",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Sunset Diner\",\n  \"email\": \"owner@sunsetdiner.com\",\n  \"phone\": \"555-0123\",\n  \"address\": \"12 Ocean Drive\",\n  \"password\": \"secret123\",\n  \"password_confirmation\": \"secret123\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/api/owner/register", "host": ["{{base_url}}"], "path": ["api", "owner", "register"] },
+                "description": "Self-signup (as opposed to Super Admin creating a restaurant directly). name, email, and password (confirmed) are required; phone and address are optional. The restaurant starts with status \"pending\" and cannot log in yet. No email goes to the owner — instead an admin-notification email is sent to app.admin_notification_email (ADMIN_NOTIFICATION_EMAIL in .env, defaults to ajmalmoon86@gmail.com) asking Super Admin to review it. Super Admin approves it the same way as any other restaurant: PATCH /restaurants/{id}/toggle-status."
+              }
+            },
             {
               "name": "Owner Login",
               "request": {

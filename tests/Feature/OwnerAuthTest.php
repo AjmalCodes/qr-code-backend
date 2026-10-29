@@ -1,7 +1,88 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Mail\NewRestaurantRegistered;
+use App\Models\Restaurant;
 use App\Models\User;
+use Illuminate\Support\Facades\Mail;
+
+test('a restaurant owner can self-register and starts out pending', function () {
+    Mail::fake();
+
+    $response = $this->postJson('/api/owner/register', [
+        'name' => 'Sunset Diner',
+        'email' => 'owner@sunsetdiner.com',
+        'phone' => '555-0123',
+        'address' => '12 Ocean Drive',
+        'password' => 'secret123',
+        'password_confirmation' => 'secret123',
+    ]);
+
+    $response->assertStatus(201)
+        ->assertJson([
+            'success' => true,
+            'data' => ['name' => 'Sunset Diner', 'email' => 'owner@sunsetdiner.com', 'status' => 'pending'],
+        ]);
+
+    $this->assertDatabaseHas('restaurants', [
+        'name' => 'Sunset Diner',
+        'email' => 'owner@sunsetdiner.com',
+        'status' => 'pending',
+    ]);
+    $this->assertDatabaseHas('users', [
+        'email' => 'owner@sunsetdiner.com',
+        'role' => UserRole::Restaurant->value,
+    ]);
+});
+
+test('registering sends a notification to the platform administrator, not the owner', function () {
+    Mail::fake();
+    config(['app.admin_notification_email' => 'ajmalmoon86@gmail.com']);
+
+    $this->postJson('/api/owner/register', [
+        'name' => 'Sunset Diner',
+        'email' => 'owner@sunsetdiner.com',
+        'password' => 'secret123',
+        'password_confirmation' => 'secret123',
+    ]);
+
+    Mail::assertSent(NewRestaurantRegistered::class, function ($mail) {
+        return $mail->hasTo('ajmalmoon86@gmail.com');
+    });
+    Mail::assertNotSent(NewRestaurantRegistered::class, fn ($mail) => $mail->hasTo('owner@sunsetdiner.com'));
+});
+
+test('a pending restaurant owner cannot log in yet', function () {
+    ['user' => $user] = createOwnerWithRestaurant('password123', [], ['status' => 'pending']);
+
+    $response = $this->postJson('/api/owner/login', [
+        'email' => $user->email,
+        'password' => 'password123',
+    ]);
+
+    $response->assertStatus(403)
+        ->assertJson(['success' => false, 'message' => 'Your restaurant registration is still pending review by our team.']);
+});
+
+test('registration requires name, email, and password', function () {
+    $response = $this->postJson('/api/owner/register', []);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['name', 'email', 'password']);
+});
+
+test('registration email must be unique among restaurants', function () {
+    $existing = Restaurant::factory()->create();
+
+    $response = $this->postJson('/api/owner/register', [
+        'name' => 'Copycat Cafe',
+        'email' => $existing->email,
+        'password' => 'secret123',
+        'password_confirmation' => 'secret123',
+    ]);
+
+    $response->assertStatus(422)->assertJsonValidationErrors(['email']);
+});
 
 test('restaurant owner can login with valid credentials', function () {
     ['user' => $user] = createOwnerWithRestaurant('password123');

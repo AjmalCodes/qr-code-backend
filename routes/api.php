@@ -53,6 +53,7 @@ Route::middleware(['auth:sanctum', EnsureSuperAdmin::class])->group(function () 
 
     Route::apiResource('restaurants', RestaurantController::class);
     Route::patch('/restaurants/{restaurant}/toggle-status', [RestaurantController::class, 'toggleStatus']);
+    Route::patch('/restaurants/{restaurant}/change-password', [RestaurantController::class, 'changePassword']);
     Route::get('/restaurant-users', [RestaurantUserController::class, 'index']);
     Route::get('/dashboard/stats', [AdminDashboardController::class, 'stats']);
 
@@ -68,6 +69,7 @@ Route::middleware(['auth:sanctum', EnsureSuperAdmin::class])->group(function () 
 |--------------------------------------------------------------------------
 */
 Route::prefix('owner')->group(function () {
+    Route::post('/register', [OwnerAuthController::class, 'register']);
     Route::post('/login', [OwnerAuthController::class, 'login']);
 
     Route::middleware(['auth:sanctum', EnsureRestaurantOwner::class])->group(function () {

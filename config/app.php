@@ -70,6 +70,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Admin Notification Email
+    |--------------------------------------------------------------------------
+    |
+    | Where platform-level notifications go — e.g. alerting the platform
+    | administrator that a restaurant owner self-registered and is awaiting
+    | review (see RestaurantService::registerRestaurant()).
+    |
+    */
+
+    'admin_notification_email' => env('ADMIN_NOTIFICATION_EMAIL', 'ajmalmoon86@gmail.com'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

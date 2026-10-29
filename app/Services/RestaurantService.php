@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\RestaurantStatus;
 use App\Enums\UserRole;
+use App\Mail\NewRestaurantRegistered;
 use App\Mail\RestaurantCreated;
 use App\Models\Restaurant;
 use App\Repositories\RestaurantRepository;
@@ -53,6 +54,37 @@ class RestaurantService
 
         // Send welcome email with credentials
         Mail::to($restaurant->email)->send(new RestaurantCreated($restaurant, $temporaryPassword));
+
+        return $restaurant;
+    }
+
+    /**
+     * A restaurant owner signing themselves up, as opposed to Super Admin
+     * creating one directly: the owner sets their own password, the
+     * restaurant starts "pending" (blocked from login, same as "inactive",
+     * until Super Admin approves it), and no welcome email goes to the
+     * owner — instead the platform administrator is notified to review it.
+     */
+    public function registerRestaurant(array $data): Restaurant
+    {
+        $user = $this->userRepository->create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'role' => UserRole::Restaurant->value,
+        ]);
+
+        $restaurant = $this->restaurantRepository->create([
+            'user_id' => $user->id,
+            'name' => $data['name'],
+            'slug' => $this->uniqueSlugFor($data['name']),
+            'email' => $data['email'],
+            'phone' => $data['phone'] ?? null,
+            'address' => $data['address'] ?? null,
+            'status' => RestaurantStatus::Pending->value,
+        ]);
+
+        Mail::to(config('app.admin_notification_email'))->send(new NewRestaurantRegistered($restaurant));
 
         return $restaurant;
     }
