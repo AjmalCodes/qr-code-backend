@@ -15,27 +15,59 @@ class Restaurant extends Model
 {
     use HasFactory;
 
+    // protected $fillable = [
+    //     'user_id',
+    //     'name',
+    //     'slug',
+    //     'email',
+    //     'phone',
+    //     'address',
+    //     'description',
+    //     'currency',
+    //     'logo',
+    //     'banner',
+    //     'status',
+    //     'primary_color',
+    //     'secondary_color',
+    //     'temporary_password',
+    // ];
+
     protected $fillable = [
-        'user_id',
         'name',
         'slug',
         'email',
         'phone',
+        'whatsapp_number',
         'address',
+        'city',
+        'country',
+        'google_maps_url',
+        'latitude',
+        'longitude',
         'description',
+        'tagline',
         'currency',
         'logo',
         'banner',
         'status',
         'primary_color',
         'secondary_color',
-        'temporary_password',
+        'website_url',
+        'facebook_url',
+        'instagram_url',
+        'tiktok_url',
+        'youtube_url',
+        'x_url',
+        'opening_hours',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => RestaurantStatus::class,
+            'latitude' => 'decimal:7',
+            'longitude' => 'decimal:7',
+            'opening_hours' => 'array',
         ];
     }
 
