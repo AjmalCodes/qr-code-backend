@@ -32,7 +32,20 @@ class UpdateProfileRequest extends FormRequest
                 Rule::unique('users', 'email')->ignore($this->user()?->id),
             ],
             'phone' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'whatsapp_number' => ['sometimes', 'nullable', 'string', 'max:30'],
             'avatar' => ['sometimes', 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+
+            // Location & Google Map
+            'google_maps_url' => ['sometimes', 'nullable', 'url', 'max:500'],
+            'latitude' => ['sometimes', 'nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['sometimes', 'nullable', 'numeric', 'between:-180,180'],
+
+            // Social links
+            'facebook_url' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'instagram_url' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'tiktok_url' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'youtube_url' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'x_url' => ['sometimes', 'nullable', 'url', 'max:255'],
         ];
     }
 }
