@@ -19,15 +19,52 @@ class ProfileService
 
     public function __construct(private UserRepository $userRepository) {}
 
+    // public function updateProfile(User $user, array $data, ?UploadedFile $avatar = null): User
+    // {
+    //     if ($avatar) {
+    //         $data['avatar'] = $this->replaceAvatar($user, $avatar);
+    //     }
+
+    //     $this->userRepository->update($user, $data);
+
+    //     return $user->fresh();
+    // }
+
     public function updateProfile(User $user, array $data, ?UploadedFile $avatar = null): User
     {
         if ($avatar) {
             $data['avatar'] = $this->replaceAvatar($user, $avatar);
         }
 
-        $this->userRepository->update($user, $data);
+        $userFields = ['name', 'email', 'phone', 'avatar'];
+        $userData = array_intersect_key($data, array_flip($userFields));
 
-        return $user->fresh();
+        if (! empty($userData)) {
+            $this->userRepository->update($user, $userData);
+        }
+
+        $restaurantFields = [
+            'whatsapp_number',
+            'google_maps_url',
+            'latitude',
+            'longitude',
+            'facebook_url',
+            'instagram_url',
+            'tiktok_url',
+            'youtube_url',
+            'x_url',
+        ];
+        $restaurantData = array_intersect_key($data, array_flip($restaurantFields));
+
+        if (! empty($restaurantData)) {
+            $restaurant = $user->restaurant;
+
+            if ($restaurant) {
+                $restaurant->update($restaurantData);
+            }
+        }
+
+        return $user->fresh('restaurant');
     }
 
     public function changePassword(User $user, string $newPassword): bool
