@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ChangeRestaurantOwnerPasswordRequest;
+use App\Http\Resources\RestaurantResource;
 use App\Models\Restaurant;
 use App\Services\ProfileService;
 use App\Services\RestaurantService;
@@ -87,22 +88,17 @@ class RestaurantController extends Controller
     }
 
     /**
-     * Get a specific restaurant - Super admin only
+     * Get a specific restaurant - Super admin only. Includes the contact,
+     * location and social links the owner manages from their profile.
      */
-    public function show(Restaurant $restaurant): JsonResponse
+    public function show(Request $request, Restaurant $restaurant): JsonResponse
     {
         return response()->json([
             'data' => [
-                'id' => $restaurant->id,
-                'name' => $restaurant->name,
-                'slug' => $restaurant->slug,
-                'email' => $restaurant->email,
-                'phone' => $restaurant->phone,
+                ...(new RestaurantResource($restaurant))->resolve($request),
                 'address' => $restaurant->address,
                 'status' => $restaurant->status->value,
                 'user_id' => $restaurant->user_id,
-                'created_at' => $restaurant->created_at,
-                'updated_at' => $restaurant->updated_at,
             ],
         ]);
     }
